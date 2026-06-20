@@ -1,46 +1,780 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter tracer · animate trace</title>
-  <!-- Font & separate CSS -->
+  <title>Letter Tracer · Stroke Order</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #f1f5f9;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+      background: white;
+      border-radius: 2rem;
+      box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .subhead {
+      color: #64748b;
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+      padding-left: 1rem;
+      border-left: 3px solid #94a3b8;
+    }
+
+    .canvas-wrapper {
+      background: #f8fafc;
+      border-radius: 20px;
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 1.5rem;
+    }
+
+    #tracerCanvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      aspect-ratio: 800 / 400;
+      background: #ffffff;
+      border-radius: 16px;
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .input-group {
+      flex: 2 1 300px;
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .input-group label {
+      font-weight: 500;
+      color: #1e293b;
+      font-size: 0.95rem;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 0.6rem 1rem;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 40px;
+      font-size: 1rem;
+      font-family: inherit;
+      outline: none;
+      transition: border 0.15s;
+      min-width: 120px;
+    }
+
+    .input-group input:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 0.5rem 1.25rem;
+      border-radius: 40px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      border: 1.5px solid #e2e8f0;
+      background: white;
+      color: #1e293b;
+      cursor: pointer;
+      transition: all 0.12s;
+      font-family: inherit;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .btn:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .btn-primary {
+      background: #1e293b;
+      border-color: #1e293b;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #0f172a;
+      border-color: #0f172a;
+    }
+
+    .btn-secondary {
+      background: #f1f5f9;
+      border-color: #e2e8f0;
+    }
+
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 1rem;
+      border-top: 1px solid #e2e8f0;
+      font-size: 0.85rem;
+      color: #64748b;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .status-badge {
+      background: #f1f5f9;
+      padding: 0.2rem 1rem;
+      border-radius: 40px;
+      font-weight: 450;
+    }
+
+    .legend {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+      font-size: 0.8rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot-start { background: #22c55e; }
+    .dot-end { background: #ef4444; }
+
+    @media (max-width: 600px) {
+      .container { padding: 1rem; }
+      .controls { flex-direction: column; align-items: stretch; }
+      .input-group { flex-wrap: wrap; }
+    }
+  </style>
 </head>
 <body>
-  <div class="tracer-card">
-    <h1>✍️ tracer</h1>
-    <div class="subhead">trace letters &amp; words · animated stroke preview</div>
+  <div class="container">
+    <h1>✍️ Trace · Stroke Order</h1>
+    <div class="subhead">Follow the numbered path · each stroke shows direction</div>
 
     <div class="canvas-wrapper">
-      <canvas id="tracerCanvas" width="600" height="300"></canvas>
+      <canvas id="tracerCanvas" width="800" height="400"></canvas>
     </div>
 
-    <div class="control-bar">
+    <div class="controls">
       <div class="input-group">
-        <label for="wordInput">✏️ text</label>
-        <input type="text" id="wordInput" placeholder="e.g. ABC, hello" value="trace" />
+        <label for="wordInput">Text</label>
+        <input type="text" id="wordInput" placeholder="e.g. ABC, hello" value="Trace" />
       </div>
-      <div class="action-group">
-        <button class="btn btn-primary" id="traceBtn">▶ trace</button>
-        <button class="btn btn-outline" id="clearBtn">⌫ clear</button>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="traceBtn">▶ Trace</button>
+        <button class="btn btn-secondary" id="clearBtn">✕ Clear</button>
+        <button class="btn btn-secondary" id="resetBtn">↺ Reset</button>
       </div>
     </div>
 
-    <div class="status-row">
-      <span id="statusLabel">⏺ ready</span>
-      <div class="footer-hint">
-        <span>⏱️ animated</span>
-        <span>🖱️ draw on canvas</span>
+    <div class="status-bar">
+      <span class="status-badge" id="statusLabel">⏺ Ready</span>
+      <div class="legend">
+        <span class="legend-item"><span class="dot dot-start"></span> Start</span>
+        <span class="legend-item"><span class="dot dot-end"></span> End</span>
+        <span class="legend-item">🔢 Stroke order</span>
       </div>
     </div>
   </div>
 
-  <!-- Separate JavaScript -->
-  <script src="tracer.js"></script>
+  <script>
+    (function() {
+      const canvas = document.getElementById('tracerCanvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+
+      // ----- state -----
+      let strokeGroups = [];        // array of { strokes: [ {x,y}, ... ], color, strokeIndex }
+      let allStrokes = [];          // flattened with metadata
+      let currentStep = 0;
+      let isAnimating = false;
+      let animationId = null;
+      const ANIMATION_SPEED = 1.8;  // steps per frame
+
+      // ----- drawing settings -----
+      const STROKE_WIDTH = 4;
+      const COLORS = ['#2563eb', '#7c3aed', '#0891b2', '#059669', '#d97706', '#dc2626', '#4f46e5', '#0d9488'];
+
+      // ----- letter stroke definitions (with proper stroke order) -----
+      const letterStrokes = {
+        'A': [
+          [[20,80],[50,10],[80,80]],
+          [[35,55],[65,55]]
+        ],
+        'B': [
+          [[20,10],[20,90]],
+          [[20,20],[55,20],[70,35],[55,50],[20,50]],
+          [[20,50],[55,50],[70,65],[55,80],[20,80]]
+        ],
+        'C': [
+          [[70,25],[50,15],[25,20],[15,45],[25,75],[50,80],[70,70]]
+        ],
+        'D': [
+          [[20,10],[20,90]],
+          [[20,20],[60,20],[75,45],[60,75],[20,80]]
+        ],
+        'E': [
+          [[20,10],[70,10]],
+          [[20,10],[20,90]],
+          [[20,50],[60,50]],
+          [[20,50],[20,90]],
+          [[20,90],[70,90]]
+        ],
+        'F': [
+          [[20,10],[70,10]],
+          [[20,10],[20,90]],
+          [[20,50],[60,50]]
+        ],
+        'G': [
+          [[70,25],[50,15],[25,20],[15,45],[25,75],[50,80],[70,70]],
+          [[70,45],[50,45]],
+          [[50,45],[50,35]]
+        ],
+        'H': [
+          [[20,10],[20,90]],
+          [[50,10],[50,90]],
+          [[20,50],[50,50]]
+        ],
+        'I': [
+          [[20,10],[70,10]],
+          [[45,10],[45,90]],
+          [[20,90],[70,90]]
+        ],
+        'J': [
+          [[70,10],[70,65],[55,85],[30,80],[20,60]],
+          [[20,10],[20,25]]
+        ],
+        'K': [
+          [[20,10],[20,90]],
+          [[20,50],[65,10]],
+          [[20,50],[65,90]]
+        ],
+        'L': [
+          [[20,10],[20,90]],
+          [[20,90],[70,90]]
+        ],
+        'M': [
+          [[15,10],[15,90]],
+          [[15,10],[40,50]],
+          [[40,50],[65,10]],
+          [[65,10],[65,90]]
+        ],
+        'N': [
+          [[20,10],[20,90]],
+          [[20,10],[65,90]],
+          [[65,10],[65,90]]
+        ],
+        'O': [
+          [[40,15],[20,30],[15,55],[30,80],[55,85],[70,65],[70,40],[55,20],[40,15]]
+        ],
+        'P': [
+          [[20,10],[20,90]],
+          [[20,20],[60,20],[75,40],[60,60],[20,60]]
+        ],
+        'Q': [
+          [[40,15],[20,30],[15,55],[30,80],[55,85],[70,65],[70,40],[55,20],[40,15]],
+          [[65,65],[80,80]]
+        ],
+        'R': [
+          [[20,10],[20,90]],
+          [[20,20],[60,20],[75,40],[60,60],[20,60]],
+          [[45,60],[70,90]]
+        ],
+        'S': [
+          [[70,25],[50,15],[20,20],[15,45],[30,55],[55,60],[65,75],[50,85],[20,80]]
+        ],
+        'T': [
+          [[15,10],[75,10]],
+          [[45,10],[45,90]]
+        ],
+        'U': [
+          [[20,10],[20,65],[35,85],[65,85],[80,65],[80,10]]
+        ],
+        'V': [
+          [[15,10],[45,85],[75,10]]
+        ],
+        'W': [
+          [[10,10],[25,70],[40,40],[55,70],[70,10]]
+        ],
+        'X': [
+          [[20,10],[70,80]],
+          [[70,10],[20,80]]
+        ],
+        'Y': [
+          [[15,10],[45,50]],
+          [[45,50],[75,10]],
+          [[45,50],[45,85]]
+        ],
+        'Z': [
+          [[15,10],[75,10]],
+          [[75,10],[15,80]],
+          [[15,80],[75,80]]
+        ],
+        'a': [
+          [[60,20],[40,15],[20,25],[15,50],[30,70],[55,70],[70,55]],
+          [[70,25],[70,55]],
+          [[70,55],[65,70]]
+        ],
+        'b': [
+          [[25,10],[25,75]],
+          [[25,30],[50,25],[65,40],[55,60],[30,65]]
+        ],
+        'c': [
+          [[65,30],[45,20],[25,30],[20,55],[35,70],[60,65]]
+        ],
+        'd': [
+          [[65,10],[65,75]],
+          [[65,30],[40,25],[25,40],[35,60],[60,65]]
+        ],
+        'e': [
+          [[65,25],[45,15],[20,25],[25,50],[45,55],[65,50]],
+          [[25,40],[55,40]]
+        ],
+        'f': [
+          [[35,10],[50,10]],
+          [[45,10],[45,75]],
+          [[25,30],[60,30]]
+        ],
+        'g': [
+          [[60,25],[40,15],[20,25],[15,50],[35,70],[60,65]],
+          [[60,45],[60,70],[50,85],[25,80],[15,65]],
+          [[15,65],[15,55]]
+        ],
+        'h': [
+          [[25,10],[25,75]],
+          [[25,30],[50,25],[65,40],[65,65]]
+        ],
+        'i': [
+          [[35,10],[35,18]],
+          [[35,28],[35,65]],
+          [[35,28],[25,45]]
+        ],
+        'j': [
+          [[50,10],[50,18]],
+          [[50,28],[50,65],[40,80],[25,75]],
+          [[50,28],[40,45]]
+        ],
+        'k': [
+          [[25,10],[25,75]],
+          [[25,35],[55,15]],
+          [[25,35],[55,65]]
+        ],
+        'l': [
+          [[25,10],[25,75]],
+          [[25,75],[35,80]]
+        ],
+        'm': [
+          [[20,75],[20,25]],
+          [[20,25],[40,45]],
+          [[40,45],[60,25]],
+          [[60,25],[60,75]]
+        ],
+        'n': [
+          [[25,75],[25,25]],
+          [[25,25],[50,25],[60,40],[60,65]]
+        ],
+        'o': [
+          [[40,20],[20,35],[25,65],[50,70],[65,55],[60,25],[40,20]]
+        ],
+        'p': [
+          [[25,20],[25,85]],
+          [[25,30],[50,25],[65,40],[55,60],[30,65]]
+        ],
+        'q': [
+          [[65,20],[65,85]],
+          [[65,30],[40,25],[25,40],[35,60],[60,65]]
+        ],
+        'r': [
+          [[25,20],[25,65]],
+          [[25,25],[45,20],[65,30]]
+        ],
+        's': [
+          [[65,30],[45,20],[20,25],[25,45],[45,50],[60,60],[50,75],[25,70]]
+        ],
+        't': [
+          [[25,15],[50,15]],
+          [[35,15],[35,70]],
+          [[35,35],[55,35]]
+        ],
+        'u': [
+          [[25,20],[25,60],[40,75],[65,65],[70,40]],
+          [[70,20],[70,40]]
+        ],
+        'v': [
+          [[20,20],[40,70],[60,20]]
+        ],
+        'w': [
+          [[15,20],[30,65],[45,40],[60,65],[75,20]]
+        ],
+        'x': [
+          [[20,20],[60,70]],
+          [[60,20],[20,70]]
+        ],
+        'y': [
+          [[20,20],[45,60]],
+          [[45,60],[70,20]],
+          [[45,60],[45,80],[35,85]]
+        ],
+        'z': [
+          [[20,20],[70,20]],
+          [[70,20],[20,75]],
+          [[20,75],[70,75]]
+        ]
+      };
+
+      // ----- helper: generate strokes from text -----
+      function generateStrokesFromText(text) {
+        if (!text) return [];
+        const result = [];
+        const words = text.split(' ');
+        let xOffset = 30;
+        const yBase = 60;
+        const charWidth = 55;
+        const gap = 25;
+        const maxWidth = W - 50;
+
+        // calculate total width for scaling
+        let totalWidth = 0;
+        for (let w of words) {
+          totalWidth += w.length * charWidth + (w.length - 1) * 8;
+        }
+        totalWidth += (words.length - 1) * gap;
+        let scale = 1;
+        if (totalWidth > maxWidth) {
+          scale = maxWidth / totalWidth;
+        }
+
+        let globalStrokeIdx = 0;
+
+        for (let wIdx = 0; wIdx < words.length; wIdx++) {
+          const word = words[wIdx];
+          for (let chIdx = 0; chIdx < word.length; chIdx++) {
+            const ch = word[chIdx];
+            const strokes = letterStrokes[ch] || letterStrokes['A']; // fallback
+
+            for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
+              const stroke = strokes[sIdx];
+              const scaled = stroke.map(([x, y]) => {
+                const sx = x * 0.7 * scale + xOffset;
+                const sy = y * 0.7 * scale + yBase;
+                return { x: sx, y: sy };
+              });
+              result.push({
+                points: scaled,
+                color: COLORS[globalStrokeIdx % COLORS.length],
+                strokeNum: globalStrokeIdx + 1,
+                letter: ch,
+                letterIndex: chIdx
+              });
+              globalStrokeIdx++;
+            }
+
+            xOffset += charWidth * 0.7 * scale + 10;
+          }
+          if (wIdx < words.length - 1) xOffset += gap * scale;
+        }
+
+        return result;
+      }
+
+      // ----- drawing functions -----
+      function drawStroke(stroke, progress = 1, showNumber = true) {
+        if (!stroke || stroke.points.length < 2) return;
+
+        const pts = stroke.points;
+        const total = pts.length;
+        const drawCount = Math.max(1, Math.floor(progress * total));
+
+        // Draw the stroke
+        ctx.save();
+        ctx.strokeStyle = stroke.color;
+        ctx.lineWidth = STROKE_WIDTH;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        ctx.beginPath();
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < drawCount && i < total; i++) {
+          ctx.lineTo(pts[i].x, pts[i].y);
+        }
+        ctx.stroke();
+
+        // Draw arrow head at end
+        if (progress >= 0.9 && drawCount >= 2) {
+          const idx = Math.min(drawCount - 1, total - 1);
+          const p1 = pts[Math.max(0, idx - 1)];
+          const p2 = pts[idx];
+          const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+          const size = 8;
+          ctx.fillStyle = stroke.color;
+          ctx.beginPath();
+          ctx.moveTo(p2.x, p2.y);
+          ctx.lineTo(p2.x - size * Math.cos(angle - 0.5), p2.y - size * Math.sin(angle - 0.5));
+          ctx.lineTo(p2.x - size * Math.cos(angle + 0.5), p2.y - size * Math.sin(angle + 0.5));
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Draw start/end markers
+        if (progress >= 0.05) {
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.arc(pts[0].x, pts[0].y, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (progress >= 0.95) {
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(pts[pts.length - 1].x, pts[pts.length - 1].y, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.restore();
+
+        // Draw stroke number
+        if (showNumber && progress >= 0.3) {
+          const midIdx = Math.floor(total / 2);
+          const mid = pts[midIdx] || pts[0];
+          ctx.save();
+          ctx.font = 'bold 14px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const num = stroke.strokeNum || 0;
+          const text = num.toString();
+          const metrics = ctx.measureText(text);
+          const pad = 6;
+          const rectW = metrics.width + pad * 2;
+          const rectH = 24;
+          const x = mid.x - rectW/2;
+          const y = mid.y - rectH/2 - 2;
+          ctx.shadowColor = 'rgba(0,0,0,0.3)';
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.beginPath();
+          ctx.roundRect(x, y, rectW, rectH, 12);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 13px Inter, sans-serif';
+          ctx.fillText(text, mid.x, mid.y + 1);
+          ctx.restore();
+        }
+      }
+
+      // ----- main draw function -----
+      function drawAll(progress = 1) {
+        ctx.clearRect(0, 0, W, H);
+
+        // Draw grid
+        ctx.save();
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < W; i += 40) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, H);
+          ctx.stroke();
+        }
+        for (let i = 0; i < H; i += 40) {
+          ctx.beginPath();
+          ctx.moveTo(0, i);
+          ctx.lineTo(W, i);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        if (!allStrokes.length) return;
+
+        const totalStrokes = allStrokes.length;
+        const strokesToDraw = Math.floor(progress * totalStrokes);
+
+        for (let i = 0; i < totalStrokes; i++) {
+          const stroke = allStrokes[i];
+          if (i < strokesToDraw) {
+            // Fully drawn
+            drawStroke(stroke, 1, true);
+          } else if (i === strokesToDraw) {
+            // Partially drawn
+            const partial = (progress * totalStrokes) - i;
+            drawStroke(stroke, partial, false);
+          } else {
+            // Not drawn yet - show ghost
+            ctx.save();
+            ctx.globalAlpha = 0.08;
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = STROKE_WIDTH * 0.5;
+            ctx.setLineDash([4, 6]);
+            ctx.beginPath();
+            const pts = stroke.points;
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let j = 1; j < pts.length; j++) {
+              ctx.lineTo(pts[j].x, pts[j].y);
+            }
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
+      }
+
+      // ----- animation -----
+      function animate() {
+        if (!isAnimating) return;
+
+        currentStep += ANIMATION_SPEED;
+        const progress = Math.min(currentStep / allStrokes.length, 1);
+        drawAll(progress);
+
+        if (progress < 1) {
+          document.getElementById('statusLabel').textContent = `⏳ ${Math.round(progress * 100)}% · stroke ${Math.min(Math.floor(progress * allStrokes.length) + 1, allStrokes.length)}/${allStrokes.length}`;
+          animationId = requestAnimationFrame(animate);
+        } else {
+          isAnimating = false;
+          document.getElementById('statusLabel').textContent = '✅ Complete · all strokes traced';
+          animationId = null;
+        }
+      }
+
+      // ----- public functions -----
+      function startTrace(text) {
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+        isAnimating = false;
+
+        const rawText = text || document.getElementById('wordInput').value || 'Trace';
+        allStrokes = generateStrokesFromText(rawText);
+
+        if (!allStrokes.length) {
+          ctx.clearRect(0, 0, W, H);
+          document.getElementById('statusLabel').textContent = '⏺ No strokes generated';
+          return;
+        }
+
+        currentStep = 0;
+        isAnimating = true;
+        document.getElementById('statusLabel').textContent = '▶ Animating...';
+        animate();
+      }
+
+      function clearTrace() {
+        if (animationId) {
+          cancelAnimationFrame(animationId);
+          animationId = null;
+        }
+        isAnimating = false;
+        allStrokes = [];
+        currentStep = 0;
+        ctx.clearRect(0, 0, W, H);
+        document.getElementById('statusLabel').textContent = '⏺ Cleared';
+      }
+
+      function resetTrace() {
+        if (allStrokes.length) {
+          currentStep = 0;
+          isAnimating = true;
+          document.getElementById('statusLabel').textContent = '▶ Replaying...';
+          animate();
+        }
+      }
+
+      // ----- UI setup -----
+      document.getElementById('traceBtn').addEventListener('click', () => {
+        startTrace(document.getElementById('wordInput').value);
+      });
+
+      document.getElementById('clearBtn').addEventListener('click', clearTrace);
+      document.getElementById('resetBtn').addEventListener('click', resetTrace);
+
+      document.getElementById('wordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          startTrace(e.target.value);
+        }
+      });
+
+      // ----- roundRect polyfill for older browsers -----
+      if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+          if (w < 2 * r) r = w / 2;
+          if (h < 2 * r) r = h / 2;
+          this.moveTo(x + r, y);
+          this.lineTo(x + w - r, y);
+          this.quadraticCurveTo(x + w, y, x + w, y + r);
+          this.lineTo(x + w, y + h - r);
+          this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+          this.lineTo(x + r, y + h);
+          this.quadraticCurveTo(x, y + h, x, y + h - r);
+          this.lineTo(x, y + r);
+          this.quadraticCurveTo(x, y, x + r, y);
+          return this;
+        };
+      }
+
+      // ----- initial load -----
+      window.addEventListener('load', () => {
+        document.getElementById('wordInput').value = 'Trace';
+        startTrace('Trace');
+      });
+    })();
+  </script>
 </body>
 </html>
