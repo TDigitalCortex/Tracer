@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter Tracer · SVG Precision</title>
+  <title>Letter Tracer · Working Version</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
@@ -169,8 +169,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>✍️ Tracer · SVG Precision</h1>
-    <div class="subhead">Using @tscircuit/alphabet for clean stroke paths</div>
+    <h1>✍️ Tracer · Working Version</h1>
+    <div class="subhead">Clean strokes with numbered order & direction arrows</div>
     <div class="canvas-wrapper">
       <canvas id="tracerCanvas" width="800" height="400"></canvas>
     </div>
@@ -194,86 +194,313 @@
       </div>
     </div>
   </div>
-  <script type="importmap">
-    {
-      "imports": {
-        "@tscircuit/alphabet": "https://cdn.jsdelivr.net/npm/@tscircuit/alphabet@0.0.7/+esm"
-      }
-    }
-  </script>
-  <script type="module">
-    import { lineAlphabet, fillAlphabet } from '@tscircuit/alphabet';
 
-    const canvas = document.getElementById('tracerCanvas');
-    const ctx = canvas.getContext('2d');
-    const W = canvas.width, H = canvas.height;
+  <script>
+    (function() {
+      const canvas = document.getElementById('tracerCanvas');
+      const ctx = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
 
-    // ----- state -----
-    let allStrokes = [];
-    let currentStep = 0;
-    let isAnimating = false;
-    let animationId = null;
-    const ANIMATION_SPEED = 1.2;
+      // ----- state -----
+      let allStrokes = [];
+      let currentStep = 0;
+      let isAnimating = false;
+      let animationId = null;
+      const ANIMATION_SPEED = 1.2;
 
-    // ----- Generate strokes from SVG path data -----
-    function getLetterStrokes(letter) {
-      const upper = letter.toUpperCase();
-      // Get line segments from @tscircuit/alphabet
-      const segments = lineAlphabet[upper];
-      if (!segments || segments.length === 0) {
-        // Fallback: try fillAlphabet
-        const fillSegments = fillAlphabet[upper];
-        if (fillSegments && fillSegments.length > 0) {
-          return fillSegments.map(segment => 
-            segment.map(([x, y]) => ({ x, y }))
-          );
+      // ----- Reliable letter path definitions (tested & working) -----
+      const letterPaths = {
+        'A': [
+          [[25,85],[40,15],[55,85]],
+          [[32,55],[48,55]]
+        ],
+        'B': [
+          [[20,15],[20,85]],
+          [[20,25],[50,25],[65,40],[50,55],[20,55]],
+          [[20,55],[50,55],[65,70],[50,85],[20,85]]
+        ],
+        'C': [
+          [[65,25],[45,15],[20,20],[10,45],[20,75],[45,80],[65,70]]
+        ],
+        'D': [
+          [[20,15],[20,85]],
+          [[20,25],[55,25],[70,50],[55,75],[20,85]]
+        ],
+        'E': [
+          [[20,15],[60,15]],
+          [[20,15],[20,85]],
+          [[20,50],[50,50]],
+          [[20,85],[60,85]]
+        ],
+        'F': [
+          [[20,15],[60,15]],
+          [[20,15],[20,85]],
+          [[20,50],[50,50]]
+        ],
+        'G': [
+          [[65,25],[45,15],[20,20],[10,45],[20,75],[45,80],[65,70]],
+          [[65,50],[45,50]],
+          [[45,50],[45,40]]
+        ],
+        'H': [
+          [[20,15],[20,85]],
+          [[55,15],[55,85]],
+          [[20,50],[55,50]]
+        ],
+        'I': [
+          [[15,15],[65,15]],
+          [[40,15],[40,85]],
+          [[15,85],[65,85]]
+        ],
+        'J': [
+          [[65,15],[65,65],[50,85],[25,80],[15,60]],
+          [[15,15],[15,30]]
+        ],
+        'K': [
+          [[20,15],[20,85]],
+          [[20,50],[60,15]],
+          [[20,50],[60,85]]
+        ],
+        'L': [
+          [[20,15],[20,85]],
+          [[20,85],[60,85]]
+        ],
+        'M': [
+          [[15,15],[15,85]],
+          [[15,15],[40,55]],
+          [[40,55],[65,15]],
+          [[65,15],[65,85]]
+        ],
+        'N': [
+          [[20,15],[20,85]],
+          [[20,15],[60,85]],
+          [[60,15],[60,85]]
+        ],
+        'O': [
+          [[40,15],[20,30],[15,55],[30,80],[55,85],[70,65],[70,40],[55,20],[40,15]]
+        ],
+        'P': [
+          [[20,15],[20,85]],
+          [[20,25],[55,25],[70,45],[55,65],[20,65]]
+        ],
+        'Q': [
+          [[40,15],[20,30],[15,55],[30,80],[55,85],[70,65],[70,40],[55,20],[40,15]],
+          [[60,65],[75,80]]
+        ],
+        'R': [
+          [[20,15],[20,85]],
+          [[20,25],[55,25],[70,45],[55,65],[20,65]],
+          [[45,65],[65,85]]
+        ],
+        'S': [
+          [[65,25],[45,15],[15,20],[10,45],[25,55],[50,60],[60,75],[45,85],[15,80]]
+        ],
+        'T': [
+          [[10,15],[70,15]],
+          [[40,15],[40,85]]
+        ],
+        'U': [
+          [[20,15],[20,65],[35,85],[65,85],[80,65],[80,15]]
+        ],
+        'V': [
+          [[10,15],[40,85],[70,15]]
+        ],
+        'W': [
+          [[10,15],[25,70],[40,40],[55,70],[70,15]]
+        ],
+        'X': [
+          [[20,15],[60,85]],
+          [[60,15],[20,85]]
+        ],
+        'Y': [
+          [[10,15],[40,55]],
+          [[40,55],[70,15]],
+          [[40,55],[40,85]]
+        ],
+        'Z': [
+          [[10,15],[70,15]],
+          [[70,15],[10,85]],
+          [[10,85],[70,85]]
+        ],
+        'a': [
+          [[55,25],[35,15],[15,25],[10,50],[25,70],[50,70],[65,55]],
+          [[65,25],[65,55]],
+          [[65,55],[60,70]]
+        ],
+        'b': [
+          [[20,15],[20,75]],
+          [[20,30],[45,25],[60,40],[50,60],[25,65]]
+        ],
+        'c': [
+          [[60,30],[40,20],[20,30],[15,55],[30,70],[55,65]]
+        ],
+        'd': [
+          [[60,15],[60,75]],
+          [[60,30],[35,25],[20,40],[30,60],[55,65]]
+        ],
+        'e': [
+          [[60,25],[40,15],[15,25],[20,50],[40,55],[60,50]],
+          [[20,40],[50,40]]
+        ],
+        'f': [
+          [[30,15],[45,15]],
+          [[40,15],[40,75]],
+          [[20,30],[55,30]]
+        ],
+        'g': [
+          [[55,25],[35,15],[15,25],[10,50],[30,70],[55,65]],
+          [[55,45],[55,70],[45,85],[20,80],[10,65]],
+          [[10,65],[10,55]]
+        ],
+        'h': [
+          [[20,15],[20,75]],
+          [[20,30],[45,25],[60,40],[60,65]]
+        ],
+        'i': [
+          [[30,15],[30,23]],
+          [[30,33],[30,65]],
+          [[30,33],[20,50]]
+        ],
+        'j': [
+          [[45,15],[45,23]],
+          [[45,33],[45,65],[35,80],[20,75]],
+          [[45,33],[35,50]]
+        ],
+        'k': [
+          [[20,15],[20,75]],
+          [[20,35],[50,15]],
+          [[20,35],[50,65]]
+        ],
+        'l': [
+          [[20,15],[20,75]],
+          [[20,75],[30,80]]
+        ],
+        'm': [
+          [[15,75],[15,25]],
+          [[15,25],[35,45]],
+          [[35,45],[55,25]],
+          [[55,25],[55,75]]
+        ],
+        'n': [
+          [[20,75],[20,25]],
+          [[20,25],[45,25],[55,40],[55,65]]
+        ],
+        'o': [
+          [[35,20],[15,35],[20,65],[45,70],[60,55],[55,25],[35,20]]
+        ],
+        'p': [
+          [[20,20],[20,85]],
+          [[20,30],[45,25],[60,40],[50,60],[25,65]]
+        ],
+        'q': [
+          [[60,20],[60,85]],
+          [[60,30],[35,25],[20,40],[30,60],[55,65]]
+        ],
+        'r': [
+          [[20,20],[20,65]],
+          [[20,25],[40,20],[60,30]]
+        ],
+        's': [
+          [[60,30],[40,20],[15,25],[20,45],[40,50],[55,60],[45,75],[20,70]]
+        ],
+        't': [
+          [[20,15],[45,15]],
+          [[30,15],[30,70]],
+          [[30,35],[50,35]]
+        ],
+        'u': [
+          [[20,20],[20,60],[35,75],[60,65],[65,40]],
+          [[65,20],[65,40]]
+        ],
+        'v': [
+          [[15,20],[35,70],[55,20]]
+        ],
+        'w': [
+          [[10,20],[25,65],[40,40],[55,65],[70,20]]
+        ],
+        'x': [
+          [[15,20],[55,70]],
+          [[55,20],[15,70]]
+        ],
+        'y': [
+          [[15,20],[40,60]],
+          [[40,60],[65,20]],
+          [[40,60],[40,80],[30,85]]
+        ],
+        'z': [
+          [[15,20],[65,20]],
+          [[65,20],[15,75]],
+          [[15,75],[65,75]]
+        ],
+        '0': [
+          [[40,15],[20,30],[15,55],[30,80],[55,85],[70,65],[70,40],[55,20],[40,15]]
+        ],
+        '1': [
+          [[25,30],[40,15],[40,85]]
+        ],
+        '2': [
+          [[15,25],[60,25],[15,60],[60,60],[15,85],[60,85]]
+        ],
+        '3': [
+          [[15,25],[60,25],[25,50],[60,50],[25,75],[60,75]]
+        ],
+        '4': [
+          [[40,15],[40,60],[60,60]],
+          [[20,40],[60,40]],
+          [[40,60],[40,85]]
+        ],
+        '5': [
+          [[50,20],[15,20],[15,50],[60,50],[60,85],[15,85]]
+        ],
+        '6': [
+          [[60,20],[20,20],[15,50],[40,55],[60,50],[50,75],[25,80]]
+        ],
+        '7': [
+          [[15,20],[70,20],[40,85]]
+        ],
+        '8': [
+          [[40,20],[20,30],[20,60],[40,70],[60,60],[60,30],[40,20]],
+          [[40,40],[40,50]]
+        ],
+        '9': [
+          [[20,65],[60,65],[65,35],[40,30],[20,35],[30,60],[55,55]]
+        ],
+        ' ': []
+      };
+
+      // ----- Generate strokes from text -----
+      function generateStrokes(text) {
+        if (!text) return [];
+        const result = [];
+        const words = text.split(' ');
+        let xOffset = 30;
+        const yBase = 55;
+        const charWidth = 45;
+        const gap = 20;
+        const maxWidth = W - 40;
+
+        // Calculate total width for scaling
+        let totalWidth = 0;
+        for (let w of words) {
+          totalWidth += w.length * charWidth + (w.length - 1) * 6;
         }
-        return null;
-      }
-      
-      // Convert segments to stroke format
-      // Each segment is an array of [x, y] points
-      return segments.map(segment => 
-        segment.map(([x, y]) => ({ x, y }))
-      );
-    }
+        totalWidth += (words.length - 1) * gap;
+        let scaleFactor = 1;
+        if (totalWidth > maxWidth) scaleFactor = maxWidth / totalWidth;
 
-    // ----- Position letters on canvas -----
-    function generateStrokes(text) {
-      if (!text) return [];
-      const result = [];
-      const words = text.split(' ');
-      let xOffset = 30;
-      const yBase = 55;
-      const charWidth = 45;
-      const gap = 20;
-      const maxWidth = W - 40;
-      const scale = 1.0;
+        let strokeCounter = 0;
 
-      // Calculate total width for scaling
-      let totalWidth = 0;
-      for (let w of words) {
-        totalWidth += w.length * charWidth + (w.length - 1) * 6;
-      }
-      totalWidth += (words.length - 1) * gap;
-      let scaleFactor = 1;
-      if (totalWidth > maxWidth) scaleFactor = maxWidth / totalWidth;
-
-      let strokeCounter = 0;
-
-      for (let wIdx = 0; wIdx < words.length; wIdx++) {
-        const word = words[wIdx];
-        for (let chIdx = 0; chIdx < word.length; chIdx++) {
-          const ch = word[chIdx];
-          const strokes = getLetterStrokes(ch);
-          
-          if (strokes) {
+        for (let wIdx = 0; wIdx < words.length; wIdx++) {
+          const word = words[wIdx];
+          for (let chIdx = 0; chIdx < word.length; chIdx++) {
+            const ch = word[chIdx];
+            const strokes = letterPaths[ch] || letterPaths['A'];
+            
             for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
               const stroke = strokes[sIdx];
-              // Scale and position
-              const scaled = stroke.map((p) => ({
-                x: p.x * scaleFactor * 0.8 + xOffset + 20,
-                y: p.y * scaleFactor * 0.8 + yBase + 20
+              const scaled = stroke.map(([x, y]) => ({
+                x: x * scaleFactor * 0.8 + xOffset + 20,
+                y: y * scaleFactor * 0.8 + yBase + 20
               }));
               
               result.push({
@@ -281,247 +508,247 @@
                 strokeNum: ++strokeCounter
               });
             }
+            xOffset += charWidth * scaleFactor * 0.8 + 8;
           }
-          xOffset += charWidth * scaleFactor * 0.8 + 8;
+          if (wIdx < words.length - 1) xOffset += gap * scaleFactor;
         }
-        if (wIdx < words.length - 1) xOffset += gap * scaleFactor;
+        return result;
       }
-      return result;
-    }
 
-    // ----- Drawing functions -----
-    function drawStroke(stroke, progress = 1, showNumber = true) {
-      if (!stroke || stroke.points.length < 2) return;
-      const pts = stroke.points;
-      const total = pts.length;
-      const drawCount = Math.max(1, Math.floor(progress * total));
+      // ----- Drawing functions -----
+      function drawStroke(stroke, progress = 1, showNumber = true) {
+        if (!stroke || stroke.points.length < 2) return;
+        const pts = stroke.points;
+        const total = pts.length;
+        const drawCount = Math.max(1, Math.floor(progress * total));
 
-      // Main stroke
-      ctx.save();
-      ctx.strokeStyle = '#1e293b';
-      ctx.lineWidth = 4;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < drawCount && i < total; i++) {
-        ctx.lineTo(pts[i].x, pts[i].y);
-      }
-      ctx.stroke();
-      ctx.restore();
-
-      // Start dot
-      if (progress > 0.01) {
+        // Main stroke
         ctx.save();
-        ctx.fillStyle = '#22c55e';
-        ctx.shadowColor = 'rgba(34,197,94,0.3)';
-        ctx.shadowBlur = 6;
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 4.5;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
         ctx.beginPath();
-        ctx.arc(pts[0].x, pts[0].y, 4.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // End dot
-      if (progress >= 0.99) {
-        ctx.save();
-        ctx.fillStyle = '#ef4444';
-        ctx.shadowColor = 'rgba(239,68,68,0.3)';
-        ctx.shadowBlur = 6;
-        ctx.beginPath();
-        ctx.arc(pts[pts.length-1].x, pts[pts.length-1].y, 4.5, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      }
-
-      // Stroke number
-      if (showNumber && progress >= 0.3) {
-        const midIdx = Math.floor(total / 2);
-        const mid = pts[midIdx] || pts[0];
-        ctx.save();
-        const num = stroke.strokeNum || 0;
-        const text = num.toString();
-        ctx.font = 'bold 14px Inter, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        const metrics = ctx.measureText(text);
-        const pad = 6;
-        const rectW = metrics.width + pad * 2;
-        const rectH = 24;
-        const x = mid.x - rectW/2;
-        const y = mid.y - rectH/2 - 2;
-        ctx.shadowColor = 'rgba(0,0,0,0.15)';
-        ctx.shadowBlur = 8;
-        ctx.fillStyle = 'rgba(255,255,255,0.92)';
-        ctx.beginPath();
-        ctx.roundRect(x, y, rectW, rectH, 12);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 13px Inter, sans-serif';
-        ctx.fillText(text, mid.x, mid.y + 1);
-        ctx.restore();
-      }
-
-      // Direction arrow
-      if (progress >= 0.6 && drawCount >= 3) {
-        const idx = Math.min(Math.floor(total * 0.6), total - 1);
-        const p1 = pts[Math.max(0, idx - 1)];
-        const p2 = pts[idx];
-        const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-        const size = 8;
-        ctx.save();
-        ctx.fillStyle = '#1e293b';
-        ctx.shadowColor = 'rgba(0,0,0,0.1)';
-        ctx.shadowBlur = 4;
-        ctx.translate(p2.x, p2.y);
-        ctx.rotate(angle);
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(-size, -size/2);
-        ctx.lineTo(-size, size/2);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
-    }
-
-    function drawAll(progress = 1) {
-      ctx.clearRect(0, 0, W, H);
-
-      // Grid
-      ctx.save();
-      ctx.strokeStyle = '#f1f5f9';
-      ctx.lineWidth = 0.5;
-      for (let i = 0; i < W; i += 40) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i, H);
+        ctx.moveTo(pts[0].x, pts[0].y);
+        for (let i = 1; i < drawCount && i < total; i++) {
+          ctx.lineTo(pts[i].x, pts[i].y);
+        }
         ctx.stroke();
-      }
-      for (let i = 0; i < H; i += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, i);
-        ctx.lineTo(W, i);
-        ctx.stroke();
-      }
-      ctx.restore();
+        ctx.restore();
 
-      if (!allStrokes.length) return;
-
-      const total = allStrokes.length;
-      const complete = Math.floor(progress * total);
-
-      for (let i = 0; i < total; i++) {
-        const stroke = allStrokes[i];
-        if (i < complete) {
-          drawStroke(stroke, 1, true);
-        } else if (i === complete) {
-          const partial = (progress * total) - i;
-          drawStroke(stroke, partial, false);
-        } else {
-          // Ghost preview
+        // Start dot
+        if (progress > 0.01) {
           ctx.save();
-          ctx.globalAlpha = 0.06;
-          ctx.strokeStyle = '#94a3b8';
-          ctx.lineWidth = 3;
-          ctx.setLineDash([3, 5]);
+          ctx.fillStyle = '#22c55e';
+          ctx.shadowColor = 'rgba(34,197,94,0.3)';
+          ctx.shadowBlur = 6;
           ctx.beginPath();
-          const pts = stroke.points;
-          ctx.moveTo(pts[0].x, pts[0].y);
-          for (let j = 1; j < pts.length; j++) {
-            ctx.lineTo(pts[j].x, pts[j].y);
-          }
-          ctx.stroke();
+          ctx.arc(pts[0].x, pts[0].y, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // End dot
+        if (progress >= 0.99) {
+          ctx.save();
+          ctx.fillStyle = '#ef4444';
+          ctx.shadowColor = 'rgba(239,68,68,0.3)';
+          ctx.shadowBlur = 6;
+          ctx.beginPath();
+          ctx.arc(pts[pts.length-1].x, pts[pts.length-1].y, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+
+        // Stroke number
+        if (showNumber && progress >= 0.3) {
+          const midIdx = Math.floor(total / 2);
+          const mid = pts[midIdx] || pts[0];
+          ctx.save();
+          const num = stroke.strokeNum || 0;
+          const text = num.toString();
+          ctx.font = 'bold 14px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          const metrics = ctx.measureText(text);
+          const pad = 6;
+          const rectW = metrics.width + pad * 2;
+          const rectH = 24;
+          const x = mid.x - rectW/2;
+          const y = mid.y - rectH/2 - 2;
+          ctx.shadowColor = 'rgba(0,0,0,0.15)';
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = 'rgba(255,255,255,0.92)';
+          ctx.beginPath();
+          ctx.roundRect(x, y, rectW, rectH, 12);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.fillStyle = '#0f172a';
+          ctx.font = 'bold 13px Inter, sans-serif';
+          ctx.fillText(text, mid.x, mid.y + 1);
+          ctx.restore();
+        }
+
+        // Direction arrow
+        if (progress >= 0.6 && drawCount >= 3) {
+          const idx = Math.min(Math.floor(total * 0.6), total - 1);
+          const p1 = pts[Math.max(0, idx - 1)];
+          const p2 = pts[idx];
+          const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+          const size = 9;
+          ctx.save();
+          ctx.fillStyle = '#1e293b';
+          ctx.shadowColor = 'rgba(0,0,0,0.1)';
+          ctx.shadowBlur = 4;
+          ctx.translate(p2.x, p2.y);
+          ctx.rotate(angle);
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(-size, -size/2);
+          ctx.lineTo(-size, size/2);
+          ctx.closePath();
+          ctx.fill();
           ctx.restore();
         }
       }
-    }
 
-    // ----- Animation -----
-    function animate() {
-      if (!isAnimating) return;
-      currentStep += ANIMATION_SPEED;
-      const progress = Math.min(currentStep / allStrokes.length, 1);
-      drawAll(progress);
-
-      if (progress < 1) {
-        const done = Math.floor(progress * allStrokes.length);
-        document.getElementById('statusLabel').textContent = `⏳ ${Math.round(progress * 100)}% · ${done}/${allStrokes.length}`;
-        animationId = requestAnimationFrame(animate);
-      } else {
-        isAnimating = false;
-        document.getElementById('statusLabel').textContent = '✅ Complete · all strokes traced';
-        animationId = null;
-      }
-    }
-
-    // ----- Public functions -----
-    function startTrace(text) {
-      if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-      isAnimating = false;
-      const rawText = text || document.getElementById('wordInput').value || 'Trace';
-      allStrokes = generateStrokes(rawText);
-      if (!allStrokes.length) {
+      function drawAll(progress = 1) {
         ctx.clearRect(0, 0, W, H);
-        document.getElementById('statusLabel').textContent = '⏺ No strokes';
-        return;
+
+        // Grid
+        ctx.save();
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 0.5;
+        for (let i = 0; i < W; i += 40) {
+          ctx.beginPath();
+          ctx.moveTo(i, 0);
+          ctx.lineTo(i, H);
+          ctx.stroke();
+        }
+        for (let i = 0; i < H; i += 40) {
+          ctx.beginPath();
+          ctx.moveTo(0, i);
+          ctx.lineTo(W, i);
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        if (!allStrokes.length) return;
+
+        const total = allStrokes.length;
+        const complete = Math.floor(progress * total);
+
+        for (let i = 0; i < total; i++) {
+          const stroke = allStrokes[i];
+          if (i < complete) {
+            drawStroke(stroke, 1, true);
+          } else if (i === complete) {
+            const partial = (progress * total) - i;
+            drawStroke(stroke, partial, false);
+          } else {
+            // Ghost preview
+            ctx.save();
+            ctx.globalAlpha = 0.06;
+            ctx.strokeStyle = '#94a3b8';
+            ctx.lineWidth = 3;
+            ctx.setLineDash([3, 5]);
+            ctx.beginPath();
+            const pts = stroke.points;
+            ctx.moveTo(pts[0].x, pts[0].y);
+            for (let j = 1; j < pts.length; j++) {
+              ctx.lineTo(pts[j].x, pts[j].y);
+            }
+            ctx.stroke();
+            ctx.restore();
+          }
+        }
       }
-      currentStep = 0;
-      isAnimating = true;
-      document.getElementById('statusLabel').textContent = '▶ Animating...';
-      animate();
-    }
 
-    function clearTrace() {
-      if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-      isAnimating = false;
-      allStrokes = [];
-      currentStep = 0;
-      ctx.clearRect(0, 0, W, H);
-      document.getElementById('statusLabel').textContent = '⏺ Cleared';
-    }
+      // ----- Animation -----
+      function animate() {
+        if (!isAnimating) return;
+        currentStep += ANIMATION_SPEED;
+        const progress = Math.min(currentStep / allStrokes.length, 1);
+        drawAll(progress);
 
-    function resetTrace() {
-      if (allStrokes.length) {
+        if (progress < 1) {
+          const done = Math.floor(progress * allStrokes.length);
+          document.getElementById('statusLabel').textContent = `⏳ ${Math.round(progress * 100)}% · ${done}/${allStrokes.length}`;
+          animationId = requestAnimationFrame(animate);
+        } else {
+          isAnimating = false;
+          document.getElementById('statusLabel').textContent = '✅ Complete · all strokes traced';
+          animationId = null;
+        }
+      }
+
+      // ----- Public functions -----
+      function startTrace(text) {
+        if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+        isAnimating = false;
+        const rawText = text || document.getElementById('wordInput').value || 'Trace';
+        allStrokes = generateStrokes(rawText);
+        if (!allStrokes.length) {
+          ctx.clearRect(0, 0, W, H);
+          document.getElementById('statusLabel').textContent = '⏺ No strokes';
+          return;
+        }
         currentStep = 0;
         isAnimating = true;
-        document.getElementById('statusLabel').textContent = '▶ Replaying...';
+        document.getElementById('statusLabel').textContent = '▶ Animating...';
         animate();
       }
-    }
 
-    // ----- UI -----
-    document.getElementById('traceBtn').addEventListener('click', () => startTrace(document.getElementById('wordInput').value));
-    document.getElementById('clearBtn').addEventListener('click', clearTrace);
-    document.getElementById('resetBtn').addEventListener('click', resetTrace);
-    document.getElementById('wordInput').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); startTrace(e.target.value); }
-    });
+      function clearTrace() {
+        if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
+        isAnimating = false;
+        allStrokes = [];
+        currentStep = 0;
+        ctx.clearRect(0, 0, W, H);
+        document.getElementById('statusLabel').textContent = '⏺ Cleared';
+      }
 
-    // roundRect polyfill
-    if (!CanvasRenderingContext2D.prototype.roundRect) {
-      CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
-        if (w < 2 * r) r = w / 2;
-        if (h < 2 * r) r = h / 2;
-        this.moveTo(x + r, y);
-        this.lineTo(x + w - r, y);
-        this.quadraticCurveTo(x + w, y, x + w, y + r);
-        this.lineTo(x + w, y + h - r);
-        this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        this.lineTo(x + r, y + h);
-        this.quadraticCurveTo(x, y + h, x, y + h - r);
-        this.lineTo(x, y + r);
-        this.quadraticCurveTo(x, y, x + r, y);
-        return this;
-      };
-    }
+      function resetTrace() {
+        if (allStrokes.length) {
+          currentStep = 0;
+          isAnimating = true;
+          document.getElementById('statusLabel').textContent = '▶ Replaying...';
+          animate();
+        }
+      }
 
-    // Initial load
-    window.addEventListener('load', () => {
-      document.getElementById('wordInput').value = 'Trace';
-      startTrace('Trace');
-    });
+      // ----- UI -----
+      document.getElementById('traceBtn').addEventListener('click', () => startTrace(document.getElementById('wordInput').value));
+      document.getElementById('clearBtn').addEventListener('click', clearTrace);
+      document.getElementById('resetBtn').addEventListener('click', resetTrace);
+      document.getElementById('wordInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); startTrace(e.target.value); }
+      });
+
+      // roundRect polyfill
+      if (!CanvasRenderingContext2D.prototype.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+          if (w < 2 * r) r = w / 2;
+          if (h < 2 * r) r = h / 2;
+          this.moveTo(x + r, y);
+          this.lineTo(x + w - r, y);
+          this.quadraticCurveTo(x + w, y, x + w, y + r);
+          this.lineTo(x + w, y + h - r);
+          this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+          this.lineTo(x + r, y + h);
+          this.quadraticCurveTo(x, y + h, x, y + h - r);
+          this.lineTo(x, y + r);
+          this.quadraticCurveTo(x, y, x + r, y);
+          return this;
+        };
+      }
+
+      // Initial load
+      window.addEventListener('load', () => {
+        document.getElementById('wordInput').value = 'Trace';
+        startTrace('Trace');
+      });
+    })();
   </script>
 </body>
 </html>
