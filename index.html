@@ -1,1 +1,46 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Letter tracer · animate trace</title>
+  <!-- Font & separate CSS -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="tracer-card">
+    <h1>✍️ tracer</h1>
+    <div class="subhead">trace letters &amp; words · animated stroke preview</div>
 
+    <div class="canvas-wrapper">
+      <canvas id="tracerCanvas" width="600" height="300"></canvas>
+    </div>
+
+    <div class="control-bar">
+      <div class="input-group">
+        <label for="wordInput">✏️ text</label>
+        <input type="text" id="wordInput" placeholder="e.g. ABC, hello" value="trace" />
+      </div>
+      <div class="action-group">
+        <button class="btn btn-primary" id="traceBtn">▶ trace</button>
+        <button class="btn btn-outline" id="clearBtn">⌫ clear</button>
+      </div>
+    </div>
+
+    <div class="status-row">
+      <span id="statusLabel">⏺ ready</span>
+      <div class="footer-hint">
+        <span>⏱️ animated</span>
+        <span>🖱️ draw on canvas</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Separate JavaScript -->
+  <script src="tracer.js"></script>
+</body>
+</html>
