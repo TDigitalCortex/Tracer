@@ -183,7 +183,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">Kanji-Animate style · Fixed B, D, R</div>
+    <div class="subhead">Kanji-Animate style · Fixed top-line alignment</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -216,17 +216,17 @@
       const statusLabel = document.getElementById('statusLabel');
       const inputField = document.getElementById('wordInput');
 
-      // ----- Letter stroke data with fixed B, D, R -----
+      // ----- Letter stroke data with fixed top-line alignment -----
       const letterStrokes = {
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
         'B': [
           'M20,15 L20,85',
-          'M20,25 C40,25 55,25 60,35 C65,45 60,55 50,55 C60,55 65,65 60,75 C55,85 40,85 20,85'
+          'M20,15 C40,15 55,20 60,35 C65,50 60,60 50,60 C60,60 65,70 60,80 C55,90 40,85 20,85'
         ],
         'C': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'],
         'D': [
           'M20,15 L20,85',
-          'M20,25 C45,25 65,25 70,50 C75,75 65,85 45,85 C25,85 20,85 20,85'
+          'M20,15 C45,15 65,20 70,50 C75,80 65,85 45,85 C25,85 20,85 20,85'
         ],
         'E': ['M20,15 L60,15', 'M20,15 L20,85', 'M20,50 L50,50', 'M20,85 L60,85'],
         'F': ['M20,15 L60,15', 'M20,15 L20,85', 'M20,50 L50,50'],
@@ -239,12 +239,12 @@
         'M': ['M15,15 L15,85', 'M15,15 L40,55', 'M40,55 L65,15', 'M65,15 L65,85'],
         'N': ['M20,15 L20,85', 'M20,15 C35,35 50,60 60,85', 'M60,15 L60,85'],
         'O': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'],
-        'P': ['M20,15 L20,85', 'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65'],
+        'P': ['M20,15 L20,85', 'M20,15 C40,15 60,20 65,45 C70,65 60,70 40,70 C25,70 20,70 20,70'],
         'Q': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15', 'M60,65 L75,80'],
         'R': [
           'M20,15 L20,85',
-          'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65',
-          'M45,60 L65,85'
+          'M20,15 C40,15 60,20 65,45 C70,65 60,70 40,70 C25,70 20,70 20,70',
+          'M45,65 L65,85'
         ],
         'S': ['M65,25 C55,15 35,15 25,20 C15,30 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80 C15,75 10,65 10,60'],
         'T': ['M10,15 L70,15', 'M40,15 L40,85'],
@@ -297,7 +297,6 @@
       function generateSVG(text) {
         if (!text) return null;
         
-        // Get container width
         const containerWidth = container.clientWidth || 780;
         const svgWidth = Math.min(containerWidth, 780);
         const padding = 30;
@@ -305,25 +304,20 @@
         const lineHeight = 90;
         const yBase = 55;
         
-        // Fixed character width and spacing
         const charWidth = 50;
         const charSpacing = 14;
-        const totalCharWidth = charWidth + charSpacing;
 
-        // Split into characters
         const chars = [];
         for (let ch of text) {
           chars.push({ char: ch });
         }
 
-        // Layout characters into lines with consistent spacing
         const lines = [];
         let currentLine = [];
         let currentWidth = 0;
 
         for (let i = 0; i < chars.length; i++) {
           const charData = chars[i];
-          
           const spacing = currentLine.length > 0 ? charSpacing : 0;
           const testWidth = currentWidth + charWidth + spacing;
           
@@ -342,7 +336,6 @@
           lines.push(currentLine);
         }
 
-        // Generate paths
         let allPaths = [];
         let strokeCounter = 0;
 
