@@ -170,7 +170,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">KanjiVgAnimate exact logic · Full A-Z, a-z, 0-9</div>
+    <div class="subhead">KanjiVgAnimate exact timing · Full A-Z, a-z, 0-9</div>
     <div class="canvas-wrapper">
       <canvas id="tracerCanvas" width="800" height="400"></canvas>
     </div>
@@ -198,21 +198,20 @@
   <script>
     (function() {
       // ============================================================
-      // KANJIVGANIMATE EXACT LOGIC - TIME-BASED ANIMATION
+      // KANJIVGANIMATE EXACT LOGIC - FULL REPLICA
       // ============================================================
       
       const canvas = document.getElementById('tracerCanvas');
       const ctx = canvas.getContext('2d');
       const W = canvas.width, H = canvas.height;
 
-      // ----- State (matches kanjivganimate) -----
+      // ----- State (matches kanjivganimate exactly) -----
       let strokeData = [];
-      let animating = false;
+      let isAnimating = false;
       let animationId = null;
-      let startTime = 0;
-      let elapsedTime = 0;
-      const DEFAULT_DURATION = 500; // ms per stroke (matches kanjivganimate default)
-      let totalDuration = 0;
+      let animStartTime = 0;
+      let animElapsed = 0;
+      const STROKE_DURATION = 500; // ms per stroke (kanjivganimate default)
 
       // ----- SVG Path parser (exact from kanjivganimate) -----
       function parseSVGPath(pathData) {
@@ -248,7 +247,7 @@
               const endX = type === 'c' ? currentX + x : x;
               const endY = type === 'c' ? currentY + y : y;
               
-              // 20 segments for smooth curves (matching kanjivganimate precision)
+              // 20 segments for smooth curves
               for (let t = 0.05; t <= 1; t += 0.05) {
                 const mt = 1 - t;
                 const px = Math.pow(mt, 3) * currentX + 
@@ -439,8 +438,7 @@
                 result.push({
                   points: scaled,
                   strokeNum: ++strokeCounter,
-                  totalPoints: scaled.length,
-                  currentPoint: 0
+                  totalPoints: scaled.length
                 });
               }
             }
@@ -582,41 +580,26 @@
           } else if (i === complete) {
             const partial = (progress * total) - i;
             drawStroke(stroke, partial, false);
-          } else {
-            // Ghost preview
-            ctx.save();
-            ctx.globalAlpha = 0.06;
-            ctx.strokeStyle = '#94a3b8';
-            ctx.lineWidth = 3;
-            ctx.setLineDash([3, 5]);
-            ctx.beginPath();
-            const pts = stroke.points;
-            ctx.moveTo(pts[0].x, pts[0].y);
-            for (let j = 1; j < pts.length; j++) {
-              ctx.lineTo(pts[j].x, pts[j].y);
-            }
-            ctx.stroke();
-            ctx.restore();
           }
+          // No ghost preview - matches kanjivganimate
         }
       }
 
-      // ----- Animation loop (EXACT kanjivganimate time-based logic) -----
+      // ----- Animation loop (EXACT kanjivganimate time-based) -----
       function animate(timestamp) {
-        if (!animating) return;
+        if (!isAnimating) return;
 
-        if (!startTime) {
-          startTime = timestamp;
+        if (!animStartTime) {
+          animStartTime = timestamp;
         }
 
-        elapsedTime = timestamp - startTime;
+        animElapsed = timestamp - animStartTime;
         
-        // Calculate which stroke and point we should be at
+        // Calculate progress based on time
         const totalStrokes = strokeData.length;
-        const timePerStroke = DEFAULT_DURATION;
-        const totalTime = totalStrokes * timePerStroke;
+        const totalDuration = totalStrokes * STROKE_DURATION;
+        const progress = Math.min(animElapsed / totalDuration, 1);
         
-        const progress = Math.min(elapsedTime / totalTime, 1);
         drawAll(progress);
 
         if (progress < 1) {
@@ -625,10 +608,10 @@
           document.getElementById('statusLabel').textContent = `⏳ ${percent}% · ${done}/${totalStrokes}`;
           animationId = requestAnimationFrame(animate);
         } else {
-          animating = false;
+          isAnimating = false;
           document.getElementById('statusLabel').textContent = '✅ Complete · all strokes traced';
           animationId = null;
-          startTime = 0;
+          animStartTime = 0;
         }
       }
 
@@ -638,8 +621,8 @@
           cancelAnimationFrame(animationId); 
           animationId = null; 
         }
-        animating = false;
-        startTime = 0;
+        isAnimating = false;
+        animStartTime = 0;
         
         const rawText = text || document.getElementById('wordInput').value || 'ABC';
         strokeData = generateStrokes(rawText);
@@ -650,7 +633,7 @@
           return;
         }
         
-        animating = true;
+        isAnimating = true;
         document.getElementById('statusLabel').textContent = '▶ Animating...';
         animationId = requestAnimationFrame(animate);
       }
@@ -660,8 +643,8 @@
           cancelAnimationFrame(animationId); 
           animationId = null; 
         }
-        animating = false;
-        startTime = 0;
+        isAnimating = false;
+        animStartTime = 0;
         strokeData = [];
         ctx.clearRect(0, 0, W, H);
         document.getElementById('statusLabel').textContent = '⏺ Cleared';
@@ -673,8 +656,8 @@
             cancelAnimationFrame(animationId); 
             animationId = null; 
           }
-          startTime = 0;
-          animating = true;
+          animStartTime = 0;
+          isAnimating = true;
           document.getElementById('statusLabel').textContent = '▶ Replaying...';
           animationId = requestAnimationFrame(animate);
         }
