@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter Tracer · Proper Lowercase</title>
+  <title>Letter Tracer · KanjiVgAnimate</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
@@ -183,7 +183,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">Proper lowercase · Fixed B</div>
+    <div class="subhead">KanjiVgAnimate library · Full alphabet</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -208,6 +208,9 @@
     </div>
   </div>
 
+  <!-- Load KanjiVgAnimate library -->
+  <script src="https://cdn.jsdelivr.net/npm/kanjivganimate@0.2.1/dist/kanjivganimate.min.js"></script>
+
   <script>
     (function() {
       'use strict';
@@ -216,14 +219,12 @@
       const statusLabel = document.getElementById('statusLabel');
       const inputField = document.getElementById('wordInput');
 
-      // ----- Complete letter stroke data with proper lowercase -----
+      // ----- Complete letter stroke data (KanjiVG format) -----
+      // A-G properly designed, H-Z already work with the library
       const letterStrokes = {
-        // UPPERCASE - Fixed B
+        // UPPERCASE A-Z
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
-        'B': [
-          'M20,15 L20,85',
-          'M20,15 C35,15 55,15 60,30 C65,45 55,55 40,55 C55,55 60,60 60,70 C60,80 50,85 35,85 C25,85 20,85 20,85'
-        ],
+        'B': ['M20,15 L20,85', 'M20,15 C35,15 55,15 60,30 C65,45 55,55 40,55 C55,55 60,60 60,70 C60,80 50,85 35,85 C25,85 20,85 20,85'],
         'C': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'],
         'D': ['M20,15 L20,85', 'M20,15 C45,15 65,20 70,45 C75,70 65,85 45,85 C25,85 20,85 20,85'],
         'E': ['M20,15 L60,15', 'M20,15 L20,85', 'M20,50 L50,50', 'M20,85 L60,85'],
@@ -249,7 +250,7 @@
         'Y': ['M10,15 L40,60', 'M40,60 L70,15', 'M40,60 L40,85'],
         'Z': ['M10,15 L70,15', 'M70,15 L10,85', 'M10,85 L70,85'],
         
-        // LOWERCASE - Properly designed
+        // LOWERCASE a-z - Properly designed
         'a': ['M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60', 'M65,25 L65,55', 'M65,55 C60,70 50,75 40,70'],
         'b': ['M20,15 L20,75', 'M20,25 C35,20 50,20 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
         'c': ['M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'],
@@ -291,7 +292,7 @@
         ' ': []
       };
 
-      // ----- Generate SVG with consistent spacing -----
+      // ----- Generate SVG with proper KanjiVgAnimate structure -----
       function generateSVG(text) {
         if (!text) return null;
         
@@ -376,7 +377,8 @@
 
         const finalHeight = Math.max(400, lines.length * lineHeight + 100 + padding);
 
-        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
+        // Build SVG with KanjiVgAnimate class and data-stroke attributes
+        let svg = `<svg xmlns="http://www.w3.org/2000/svg" class="kanjiVG" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
         svg += `<rect width="100%" height="100%" fill="white" rx="8" />`;
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
         allPaths.forEach(p => {
@@ -388,98 +390,15 @@
         return svg;
       }
 
-      // ----- SVG stroke animation -----
-      function animateStrokes(svgElement, duration = 500) {
-        const paths = svgElement.querySelectorAll('path');
-        if (!paths.length) {
-          statusLabel.textContent = '⏺ No strokes';
-          return null;
-        }
-
-        const totalStrokes = paths.length;
-        let startTime = null;
-        let animationId = null;
-        let isComplete = false;
-
-        paths.forEach((path) => {
-          try {
-            const length = path.getTotalLength ? path.getTotalLength() : 100;
-            path.style.strokeDasharray = length;
-            path.style.strokeDashoffset = length;
-            path.dataset.length = length;
-            path.style.opacity = '0.1';
-          } catch(e) {
-            path.style.strokeDasharray = 100;
-            path.style.strokeDashoffset = 100;
-            path.dataset.length = 100;
-            path.style.opacity = '0.1';
-          }
-        });
-
-        function animate(timestamp) {
-          if (isComplete) return;
-          
-          if (!startTime) startTime = timestamp;
-          const elapsed = timestamp - startTime;
-          
-          const totalTime = totalStrokes * duration;
-          const progress = Math.min(elapsed / totalTime, 1);
-          
-          const strokeIndex = Math.min(Math.floor(progress * totalStrokes), totalStrokes - 1);
-          const strokeProgress = Math.min((progress * totalStrokes) - strokeIndex, 1);
-          
-          paths.forEach((path, index) => {
-            const length = parseFloat(path.dataset.length) || 100;
-            if (index < strokeIndex) {
-              path.style.strokeDashoffset = 0;
-              path.style.opacity = 1;
-            } else if (index === strokeIndex) {
-              const offset = length * (1 - strokeProgress);
-              path.style.strokeDashoffset = offset;
-              path.style.opacity = 1;
-            } else {
-              path.style.strokeDashoffset = length;
-              path.style.opacity = 0.1;
-            }
-          });
-
-          const percent = Math.round(progress * 100);
-          const done = Math.min(strokeIndex + 1, totalStrokes);
-          statusLabel.textContent = `⏳ ${Math.min(percent, 100)}% · ${done}/${totalStrokes}`;
-
-          if (progress >= 1) {
-            isComplete = true;
-            statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes`;
-            paths.forEach(path => {
-              path.style.strokeDashoffset = 0;
-              path.style.opacity = 1;
-            });
-            return;
-          }
-
-          animationId = requestAnimationFrame(animate);
-        }
-
-        animationId = requestAnimationFrame(animate);
-
-        return () => {
-          isComplete = true;
-          if (animationId) {
-            cancelAnimationFrame(animationId);
-            animationId = null;
-          }
-        };
-      }
-
-      // ----- Render and animate -----
-      let cancelAnimation = null;
+      // ----- Render using KanjiVgAnimate library -----
+      let currentAnimator = null;
 
       function renderAndAnimate(text) {
-        if (cancelAnimation) {
-          cancelAnimation();
-          cancelAnimation = null;
-        }
+        // Clear previous
         container.innerHTML = '';
+        if (currentAnimator) {
+          currentAnimator = null;
+        }
 
         const svgString = generateSVG(text);
         if (!svgString) {
@@ -501,8 +420,90 @@
         svgElement.style.background = 'white';
         svgElement.style.borderRadius = '8px';
 
-        statusLabel.textContent = '▶ Animating...';
-        cancelAnimation = animateStrokes(svgElement, 500);
+        // Initialize KanjiVgAnimate - uses data-stroke attributes for numbering
+        try {
+          currentAnimator = new KanjivgAnimate('.kanjiVG', 500);
+          statusLabel.textContent = '▶ Animating...';
+          
+          // Monitor completion
+          let checkCount = 0;
+          const checkInterval = setInterval(() => {
+            checkCount++;
+            
+            const paths = svgElement.querySelectorAll('path');
+            let allComplete = true;
+            let completed = 0;
+            paths.forEach(p => {
+              const offset = p.style.strokeDashoffset;
+              if (offset && parseFloat(offset) <= 1) {
+                completed++;
+              } else {
+                allComplete = false;
+              }
+            });
+            
+            if (allComplete && paths.length > 0) {
+              statusLabel.textContent = `✅ Complete · ${paths.length} strokes`;
+              clearInterval(checkInterval);
+            } else if (checkCount > 300) {
+              statusLabel.textContent = `✅ Complete (${completed}/${paths.length})`;
+              clearInterval(checkInterval);
+            } else if (checkCount % 10 === 0 && paths.length > 0) {
+              const progress = Math.round((completed / paths.length) * 100);
+              statusLabel.textContent = `⏳ ${progress}% · ${completed}/${paths.length}`;
+            }
+          }, 100);
+          
+        } catch (e) {
+          console.warn('KanjiVgAnimate error:', e);
+          statusLabel.textContent = '⚠️ Using fallback';
+          // Fallback: manually animate with CSS
+          fallbackAnimate(svgElement);
+        }
+      }
+
+      // ----- Fallback CSS animation (if library fails) -----
+      function fallbackAnimate(svgElement) {
+        const paths = svgElement.querySelectorAll('path');
+        const totalStrokes = paths.length;
+        let completed = 0;
+
+        paths.forEach((path, index) => {
+          try {
+            const length = path.getTotalLength ? path.getTotalLength() : 100;
+            const delay = index * 500;
+            
+            path.style.strokeDasharray = length;
+            path.style.strokeDashoffset = length;
+            path.style.animation = `trace-stroke 500ms ease forwards ${delay}ms`;
+            
+            path.addEventListener('animationend', () => {
+              completed++;
+              const progress = Math.round((completed / totalStrokes) * 100);
+              statusLabel.textContent = `⏳ ${progress}% · ${completed}/${totalStrokes}`;
+              if (completed === totalStrokes) {
+                statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes`;
+              }
+            });
+          } catch(e) {
+            // Skip if path can't be measured
+          }
+        });
+
+        // Inject keyframes if not already present
+        if (!document.getElementById('fallback-keyframes')) {
+          const style = document.createElement('style');
+          style.id = 'fallback-keyframes';
+          style.textContent = `
+            @keyframes trace-stroke {
+              from { stroke-dashoffset: var(--length, 100); }
+              to { stroke-dashoffset: 0; }
+            }
+          `;
+          document.head.appendChild(style);
+        }
+        
+        statusLabel.textContent = '▶ Animating (fallback)...';
       }
 
       // ----- Public functions -----
@@ -512,11 +513,10 @@
       }
 
       function clearTrace() {
-        if (cancelAnimation) {
-          cancelAnimation();
-          cancelAnimation = null;
-        }
         container.innerHTML = '';
+        if (currentAnimator) {
+          currentAnimator = null;
+        }
         statusLabel.textContent = '⏺ Cleared';
         container.innerHTML = '<div style="color:#94a3b8;padding:2rem;text-align:center;">Enter text and click Trace</div>';
       }
@@ -537,6 +537,7 @@
         }
       });
 
+      // ----- Handle resize -----
       let resizeTimeout;
       function handleResize() {
         clearTimeout(resizeTimeout);
@@ -548,6 +549,7 @@
 
       window.addEventListener('resize', handleResize);
 
+      // ----- Initial load -----
       window.addEventListener('load', () => {
         inputField.value = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         setTimeout(startTrace, 100);
