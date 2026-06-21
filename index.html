@@ -283,7 +283,7 @@
         ' ': []
       };
 
-      // ----- Generate SVG with consistent spacing -----
+      // ----- Generate SVG with consistent spacing for ALL characters -----
       function generateSVG(text) {
         if (!text) return null;
         
@@ -295,9 +295,9 @@
         const lineHeight = 90;
         const yBase = 55;
         
-        // Fixed character width and spacing
-        const charWidth = 45;
-        const charSpacing = 12; // Consistent spacing between characters
+        // Fixed character width and spacing - applied to ALL characters equally
+        const charWidth = 50;
+        const charSpacing = 14; // Consistent spacing between ALL characters
         const totalCharWidth = charWidth + charSpacing;
 
         // Split into characters
@@ -313,11 +313,10 @@
 
         for (let i = 0; i < chars.length; i++) {
           const charData = chars[i];
-          const charWidth_ = charWidth;
           
           // Add spacing between characters on same line
           const spacing = currentLine.length > 0 ? charSpacing : 0;
-          const testWidth = currentWidth + charWidth_ + spacing;
+          const testWidth = currentWidth + charWidth + spacing;
           
           if (testWidth <= maxWidth) {
             currentLine.push(charData);
@@ -327,7 +326,7 @@
               lines.push(currentLine);
             }
             currentLine = [charData];
-            currentWidth = charWidth_;
+            currentWidth = charWidth;
           }
         }
         if (currentLine.length > 0) {
@@ -350,6 +349,7 @@
             const ch = charData.char;
             const strokes = letterStrokes[ch] || letterStrokes['A'];
             
+            // Every character gets the SAME position calculation
             const charX = xOffset + charIdx * (charWidth + charSpacing);
             
             for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
