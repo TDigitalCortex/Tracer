@@ -51,23 +51,26 @@
       min-height: 400px;
       position: relative;
       overflow: auto;
+      max-height: 600px;
     }
     #svgContainer {
       width: 100%;
       min-height: 400px;
       display: flex;
       justify-content: center;
-      align-items: center;
+      align-items: flex-start;
       background: #ffffff;
       border-radius: 16px;
       overflow: visible;
       position: relative;
+      padding: 10px 0;
     }
     #svgContainer svg {
       width: 100%;
       height: auto;
       display: block;
       background: white;
+      max-width: 100%;
     }
     .controls {
       display: flex;
@@ -472,50 +475,92 @@
         ' ': []
       };
 
-      // ----- Generate SVG with proper wrap logic -----
+      // ----- Generate SVG with proper wrap and border logic -----
       function generateSVG(text) {
         if (!text) return null;
         
         const words = text.split(' ');
-        const svgWidth = 800;
+        const svgWidth = 780;
         const charWidth = 50;
         const gap = 30;
         const scaleFactor = 1.0;
-        const maxWidth = svgWidth - 40;
+        const maxWidth = svgWidth - 60;
         const lineHeight = 90;
         const yBase = 55;
+        const padding = 30;
 
-        // Calculate width for each word
-        const wordWidths = words.map(word => {
-          let width = 0;
+        // Calculate width for each word and each character
+        const wordData = words.map(word => {
+          let totalWidth = 0;
+          const chars = [];
           for (let ch of word) {
-            const strokes = letterStrokes[ch] || letterStrokes['A'];
-            width += charWidth * scaleFactor * 0.9 + 6;
+            const chWidth = charWidth * scaleFactor * 0.9 + 6;
+            totalWidth += chWidth;
+            chars.push({ char: ch, width: chWidth });
           }
-          return width;
+          return { word, chars, totalWidth };
         });
 
-        // Layout with wrapping
+        // Layout with proper wrapping
         const lines = [];
         let currentLine = [];
         let currentWidth = 0;
 
-        for (let i = 0; i < words.length; i++) {
-          const word = words[i];
-          const wWidth = wordWidths[i];
+        for (let i = 0; i < wordData.length; i++) {
+          const data = wordData[i];
           const spacing = currentLine.length > 0 ? gap : 0;
           
-          if (currentWidth + wWidth + spacing > maxWidth && currentLine.length > 0) {
-            lines.push(currentLine);
-            currentLine = [word];
-            currentWidth = wWidth;
+          // Check if this word fits on the current line
+          if (currentWidth + data.totalWidth + spacing <= maxWidth) {
+            currentLine.push(data);
+            currentWidth += data.totalWidth + spacing;
           } else {
-            currentLine.push(word);
-            currentWidth += wWidth + spacing;
+            // Check if we can hyphenate or if the word is too long
+            if (data.totalWidth > maxWidth && currentLine.length === 0) {
+              // Word is too long - break it character by character
+              let charLine = [];
+              let charWidth = 0;
+              for (let charData of data.chars) {
+                const charSpacing = charLine.length > 0 ? 6 : 0;
+                if (charWidth + charData.width + charSpacing <= maxWidth) {
+                  charLine.push(charData);
+                  charWidth += charData.width + charSpacing;
+                } else {
+                  if (charLine.length > 0) {
+                    lines.push(charLine);
+                    charLine = [charData];
+                    charWidth = charData.width;
+                  } else {
+                    // Single character is too wide - force it
+                    charLine.push(charData);
+                    lines.push(charLine);
+                    charLine = [];
+                    charWidth = 0;
+                  }
+                }
+              }
+              if (charLine.length > 0) {
+                lines.push(charLine);
+              }
+              currentLine = [];
+              currentWidth = 0;
+            } else {
+              // Start new line
+              if (currentLine.length > 0) {
+                lines.push(currentLine);
+              }
+              currentLine = [data];
+              currentWidth = data.totalWidth;
+            }
           }
         }
         if (currentLine.length > 0) {
           lines.push(currentLine);
+        }
+
+        // If no lines were created, create at least one
+        if (lines.length === 0 && words.length > 0) {
+          lines.push([wordData[0]]);
         }
 
         let allPaths = [];
@@ -523,15 +568,20 @@
 
         // Generate paths for each line
         for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
-          const lineWords = lines[lineIdx];
-          let xOffset = 20;
+          const lineData = lines[lineIdx];
+          let xOffset = padding;
           const yOffset = yBase + (lineIdx * lineHeight);
           
-          for (let wIdx = 0; wIdx < lineWords.length; wIdx++) {
-            const word = lineWords[wIdx];
+          for (let itemIdx = 0; itemIdx < lineData.length; itemIdx++) {
+            const item = lineData[itemIdx];
             
-            for (let chIdx = 0; chIdx < word.length; chIdx++) {
-              const ch = word[chIdx];
+            // Handle both word and character data
+            const chars = item.char ? [item] : item;
+            const items = Array.isArray(item) ? item : [item];
+            
+            for (let dataIdx = 0; dataIdx < items.length; dataIdx++) {
+              const data = items[dataIdx];
+              const ch = data.char || data;
               const strokes = letterStrokes[ch] || letterStrokes['A'];
               
               for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
@@ -555,17 +605,18 @@
                   strokeNum: ++strokeCounter
                 });
               }
-              xOffset += charWidth * scaleFactor * 0.9 + 6;
+              xOffset += (data.width || charWidth * scaleFactor * 0.9 + 6);
             }
-            if (wIdx < lineWords.length - 1) xOffset += gap * scaleFactor;
+            if (itemIdx < lineData.length - 1) xOffset += gap * scaleFactor;
           }
         }
 
-        // Calculate final height
-        const finalHeight = Math.max(400, lines.length * lineHeight + 100);
+        // Calculate final height with padding
+        const finalHeight = Math.max(400, lines.length * lineHeight + 100 + padding);
 
         // Build SVG
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
+        svg += `<rect width="100%" height="100%" fill="white" rx="8" />`;
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
         allPaths.forEach(p => {
           svg += `<path d="${p.d}" data-stroke="${p.strokeNum}" />`;
@@ -673,6 +724,7 @@
         svgElement.style.height = 'auto';
         svgElement.style.display = 'block';
         svgElement.style.background = 'white';
+        svgElement.style.borderRadius = '8px';
 
         statusLabel.textContent = '▶ Animating...';
         cancelAnimation = animateStrokes(svgElement, 500);
