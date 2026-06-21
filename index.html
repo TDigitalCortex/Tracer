@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter Tracer · Working Version</title>
+  <title>Letter Tracer · Kanji-Animate Style</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
@@ -56,7 +56,7 @@
       aspect-ratio: 800 / 400;
       background: #ffffff;
       border-radius: 16px;
-      cursor: crosshair;
+      cursor: default;
       touch-action: none;
     }
     .controls {
@@ -169,8 +169,8 @@
 </head>
 <body>
   <div class="container">
-    <h1>✍️ Tracer · Working Version</h1>
-    <div class="subhead">Clean strokes with numbered order & direction arrows</div>
+    <h1>✍️ Letter Tracer</h1>
+    <div class="subhead">Adapted from Kanji-Animate · Numbered stroke order</div>
     <div class="canvas-wrapper">
       <canvas id="tracerCanvas" width="800" height="400"></canvas>
     </div>
@@ -201,14 +201,15 @@
       const ctx = canvas.getContext('2d');
       const W = canvas.width, H = canvas.height;
 
-      // ----- state -----
+      // ----- State (adapted from Kanji-Animate) -----
       let allStrokes = [];
-      let currentStep = 0;
+      let currentStrokeIndex = 0;
+      let currentPointIndex = 0;
       let isAnimating = false;
       let animationId = null;
-      const ANIMATION_SPEED = 1.2;
+      const ANIMATION_SPEED = 1.8; // points per frame
 
-      // ----- Reliable letter path definitions (tested & working) -----
+      // ----- Letter stroke definitions (structured like KanjiVG) -----
       const letterPaths = {
         'A': [
           [[25,85],[40,15],[55,85]],
@@ -468,7 +469,7 @@
         ' ': []
       };
 
-      // ----- Generate strokes from text -----
+      // ----- Generate strokes (similar to Kanji-Animate's data structure) -----
       function generateStrokes(text) {
         if (!text) return [];
         const result = [];
@@ -479,7 +480,7 @@
         const gap = 20;
         const maxWidth = W - 40;
 
-        // Calculate total width for scaling
+        // Calculate scaling
         let totalWidth = 0;
         for (let w of words) {
           totalWidth += w.length * charWidth + (w.length - 1) * 6;
@@ -515,14 +516,14 @@
         return result;
       }
 
-      // ----- Drawing functions -----
+      // ----- Drawing functions (adapted from Kanji-Animate animation style) -----
       function drawStroke(stroke, progress = 1, showNumber = true) {
         if (!stroke || stroke.points.length < 2) return;
         const pts = stroke.points;
         const total = pts.length;
         const drawCount = Math.max(1, Math.floor(progress * total));
 
-        // Main stroke
+        // Main stroke with smooth rendering
         ctx.save();
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 4.5;
@@ -536,7 +537,7 @@
         ctx.stroke();
         ctx.restore();
 
-        // Start dot
+        // Start marker (green dot)
         if (progress > 0.01) {
           ctx.save();
           ctx.fillStyle = '#22c55e';
@@ -548,7 +549,7 @@
           ctx.restore();
         }
 
-        // End dot
+        // End marker (red dot)
         if (progress >= 0.99) {
           ctx.save();
           ctx.fillStyle = '#ef4444';
@@ -560,7 +561,7 @@
           ctx.restore();
         }
 
-        // Stroke number
+        // Stroke number badge (like Kanji-Animate)
         if (showNumber && progress >= 0.3) {
           const midIdx = Math.floor(total / 2);
           const mid = pts[midIdx] || pts[0];
@@ -589,7 +590,7 @@
           ctx.restore();
         }
 
-        // Direction arrow
+        // Direction arrow (like Kanji-Animate's stroke direction)
         if (progress >= 0.6 && drawCount >= 3) {
           const idx = Math.min(Math.floor(total * 0.6), total - 1);
           const p1 = pts[Math.max(0, idx - 1)];
@@ -612,10 +613,11 @@
         }
       }
 
+      // ----- Main draw loop (adapted from Kanji-Animate) -----
       function drawAll(progress = 1) {
         ctx.clearRect(0, 0, W, H);
 
-        // Grid
+        // Subtle grid
         ctx.save();
         ctx.strokeStyle = '#f1f5f9';
         ctx.lineWidth = 0.5;
@@ -646,7 +648,7 @@
             const partial = (progress * total) - i;
             drawStroke(stroke, partial, false);
           } else {
-            // Ghost preview
+            // Ghost preview (like Kanji-Animate's unfinished strokes)
             ctx.save();
             ctx.globalAlpha = 0.06;
             ctx.strokeStyle = '#94a3b8';
@@ -664,11 +666,11 @@
         }
       }
 
-      // ----- Animation -----
+      // ----- Animation loop (similar to Kanji-Animate) -----
       function animate() {
         if (!isAnimating) return;
-        currentStep += ANIMATION_SPEED;
-        const progress = Math.min(currentStep / allStrokes.length, 1);
+        currentStrokeIndex += ANIMATION_SPEED;
+        const progress = Math.min(currentStrokeIndex / allStrokes.length, 1);
         drawAll(progress);
 
         if (progress < 1) {
@@ -693,7 +695,7 @@
           document.getElementById('statusLabel').textContent = '⏺ No strokes';
           return;
         }
-        currentStep = 0;
+        currentStrokeIndex = 0;
         isAnimating = true;
         document.getElementById('statusLabel').textContent = '▶ Animating...';
         animate();
@@ -703,21 +705,21 @@
         if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
         isAnimating = false;
         allStrokes = [];
-        currentStep = 0;
+        currentStrokeIndex = 0;
         ctx.clearRect(0, 0, W, H);
         document.getElementById('statusLabel').textContent = '⏺ Cleared';
       }
 
       function resetTrace() {
         if (allStrokes.length) {
-          currentStep = 0;
+          currentStrokeIndex = 0;
           isAnimating = true;
           document.getElementById('statusLabel').textContent = '▶ Replaying...';
           animate();
         }
       }
 
-      // ----- UI -----
+      // ----- UI Setup -----
       document.getElementById('traceBtn').addEventListener('click', () => startTrace(document.getElementById('wordInput').value));
       document.getElementById('clearBtn').addEventListener('click', clearTrace);
       document.getElementById('resetBtn').addEventListener('click', resetTrace);
