@@ -183,7 +183,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">Kanji-Animate style · Proper stroke order</div>
+    <div class="subhead">Kanji-Animate style · Consistent spacing</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -283,36 +283,37 @@
         ' ': []
       };
 
-      // ----- Generate SVG with correct line break logic -----
+      // ----- Generate SVG with consistent spacing -----
       function generateSVG(text) {
         if (!text) return null;
         
         // Get container width
         const containerWidth = container.clientWidth || 780;
         const svgWidth = Math.min(containerWidth, 780);
-        const charWidth = 50;
-        const scaleFactor = 1.0;
         const padding = 30;
         const maxWidth = svgWidth - (padding * 2);
         const lineHeight = 90;
         const yBase = 55;
-        const charSpacing = 8; // Increased spacing between characters
+        
+        // Fixed character width and spacing
+        const charWidth = 45;
+        const charSpacing = 12; // Consistent spacing between characters
+        const totalCharWidth = charWidth + charSpacing;
 
-        // Split into characters with widths
+        // Split into characters
         const chars = [];
         for (let ch of text) {
-          const width = charWidth * scaleFactor * 0.9;
-          chars.push({ char: ch, width: width });
+          chars.push({ char: ch });
         }
 
-        // Layout characters into lines
+        // Layout characters into lines with consistent spacing
         const lines = [];
         let currentLine = [];
         let currentWidth = 0;
 
         for (let i = 0; i < chars.length; i++) {
           const charData = chars[i];
-          const charWidth_ = charData.width;
+          const charWidth_ = charWidth;
           
           // Add spacing between characters on same line
           const spacing = currentLine.length > 0 ? charSpacing : 0;
@@ -339,7 +340,9 @@
 
         for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
           const lineData = lines[lineIdx];
-          let xOffset = padding;
+          // Center the line within the available space
+          const totalLineWidth = lineData.length * charWidth + (lineData.length - 1) * charSpacing;
+          const xOffset = padding + (maxWidth - totalLineWidth) / 2;
           const yOffset = yBase + (lineIdx * lineHeight);
           
           for (let charIdx = 0; charIdx < lineData.length; charIdx++) {
@@ -347,15 +350,17 @@
             const ch = charData.char;
             const strokes = letterStrokes[ch] || letterStrokes['A'];
             
+            const charX = xOffset + charIdx * (charWidth + charSpacing);
+            
             for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
               const pathData = strokes[sIdx];
               
               const transformed = pathData.replace(/([MLCQA])([^MLCQA]*)/g, (match, cmd, coords) => {
                 const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
                 const scaled = nums.map((n, i) => {
-                  const val = n * scaleFactor * 0.9;
+                  const val = n * 0.9;
                   if (i % 2 === 0) {
-                    return val + xOffset + 15;
+                    return val + charX + 15;
                   } else {
                     return val + yOffset + 20;
                   }
@@ -368,8 +373,6 @@
                 strokeNum: ++strokeCounter
               });
             }
-            // Add spacing after each character
-            xOffset += charData.width + charSpacing;
           }
         }
 
@@ -451,7 +454,7 @@
           const done = Math.min(strokeIndex + 1, totalStrokes);
           statusLabel.textContent = `⏳ ${Math.min(percent, 100)}% · ${done}/${totalStrokes}`;
 
-          // Check completion - using progress >= 1 ensures it finishes
+          // Check completion
           if (progress >= 1) {
             isComplete = true;
             statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes`;
