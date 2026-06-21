@@ -283,19 +283,22 @@
         ' ': []
       };
 
-      // ----- Generate SVG with proper line break logic -----
+      // ----- Generate SVG with border-width based line breaks -----
       function generateSVG(text) {
         if (!text) return null;
         
-        const words = text.split(' ');
-        const svgWidth = 780;
+        // Get the actual container width
+        const containerWidth = container.clientWidth || 780;
+        const svgWidth = Math.min(containerWidth - 20, 780);
         const charWidth = 50;
         const gap = 30;
         const scaleFactor = 1.0;
-        const maxWidth = svgWidth - 60;
+        const padding = 30;
+        const maxWidth = svgWidth - (padding * 2);
         const lineHeight = 90;
         const yBase = 55;
-        const padding = 30;
+
+        const words = text.split(' ');
 
         // Calculate exact width for each word
         const wordData = words.map(word => {
@@ -309,7 +312,7 @@
           return { word, chars, totalWidth };
         });
 
-        // Layout with exact wrapping
+        // Layout with exact wrapping based on maxWidth
         const lines = [];
         let currentLine = [];
         let currentWidth = 0;
@@ -454,11 +457,9 @@
           if (!startTime) startTime = timestamp;
           const elapsed = timestamp - startTime;
           
-          // Calculate which stroke we're on
           const strokeIndex = Math.min(Math.floor(elapsed / duration), totalStrokes - 1);
           const strokeProgress = Math.min((elapsed % duration) / duration, 1);
           
-          // Update paths
           paths.forEach((path, index) => {
             const length = parseFloat(path.dataset.length) || 100;
             if (index < strokeIndex) {
@@ -474,16 +475,13 @@
             }
           });
 
-          // Update status
           const percent = Math.round(((strokeIndex + strokeProgress) / totalStrokes) * 100);
           const done = Math.min(strokeIndex + 1, totalStrokes);
           statusLabel.textContent = `⏳ ${Math.min(percent, 100)}% · ${done}/${totalStrokes}`;
 
-          // Check completion - only when fully done
           if (strokeIndex >= totalStrokes - 1 && strokeProgress >= 1) {
             completed = true;
             statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes`;
-            // Ensure all paths are fully visible
             paths.forEach(path => {
               path.style.strokeDashoffset = 0;
               path.style.opacity = 1;
@@ -571,7 +569,18 @@
         }
       });
 
-      // ----- Initial load -----
+      // ----- Initial load with resize handling -----
+      function handleResize() {
+        const text = inputField.value || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        renderAndAnimate(text);
+      }
+
+      let resizeTimeout;
+      window.addEventListener('resize', () => {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(handleResize, 300);
+      });
+
       window.addEventListener('load', () => {
         inputField.value = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         setTimeout(startTrace, 100);
