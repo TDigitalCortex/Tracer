@@ -220,7 +220,6 @@
       const inputField = document.getElementById('wordInput');
 
       // ----- Complete letter stroke data (KanjiVG format) -----
-      // A-G properly designed, H-Z already work with the library
       const letterStrokes = {
         // UPPERCASE A-Z
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
@@ -250,7 +249,7 @@
         'Y': ['M10,15 L40,60', 'M40,60 L70,15', 'M40,60 L40,85'],
         'Z': ['M10,15 L70,15', 'M70,15 L10,85', 'M10,85 L70,85'],
         
-        // LOWERCASE a-z - Properly designed
+        // LOWERCASE a-z
         'a': ['M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60', 'M65,25 L65,55', 'M65,55 C60,70 50,75 40,70'],
         'b': ['M20,15 L20,75', 'M20,25 C35,20 50,20 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
         'c': ['M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'],
