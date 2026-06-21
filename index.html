@@ -283,13 +283,13 @@
         ' ': []
       };
 
-      // ----- Generate SVG with border-width based line breaks -----
+      // ----- Generate SVG with correct line break logic -----
       function generateSVG(text) {
         if (!text) return null;
         
-        // Get the actual container width
+        // Get container width for accurate line breaks
         const containerWidth = container.clientWidth || 780;
-        const svgWidth = Math.min(containerWidth - 20, 780);
+        const svgWidth = Math.min(containerWidth, 780);
         const charWidth = 50;
         const gap = 30;
         const scaleFactor = 1.0;
@@ -300,7 +300,7 @@
 
         const words = text.split(' ');
 
-        // Calculate exact width for each word
+        // Calculate exact width for each character and word
         const wordData = words.map(word => {
           let totalWidth = 0;
           const chars = [];
@@ -312,51 +312,33 @@
           return { word, chars, totalWidth };
         });
 
-        // Layout with exact wrapping based on maxWidth
+        // Layout with correct line break logic
         const lines = [];
         let currentLine = [];
         let currentWidth = 0;
 
         for (let i = 0; i < wordData.length; i++) {
           const data = wordData[i];
+          
+          // Check if adding this word would exceed the max width
+          const wordWidth = data.totalWidth;
           const spacing = currentLine.length > 0 ? gap : 0;
           
-          if (currentWidth + data.totalWidth + spacing <= maxWidth) {
+          if (currentWidth + wordWidth + spacing <= maxWidth) {
+            // Word fits on current line
             currentLine.push(data);
-            currentWidth += data.totalWidth + spacing;
+            currentWidth += wordWidth + spacing;
           } else {
-            // Check if we need to break the word
-            if (currentLine.length === 0 && data.totalWidth > maxWidth) {
-              // Break word character by character
-              let charLine = [];
-              let charWidth = 0;
-              for (let charData of data.chars) {
-                const charSpacing = charLine.length > 0 ? 6 : 0;
-                if (charWidth + charData.width + charSpacing <= maxWidth) {
-                  charLine.push(charData);
-                  charWidth += charData.width + charSpacing;
-                } else {
-                  if (charLine.length > 0) {
-                    lines.push(charLine);
-                  }
-                  charLine = [charData];
-                  charWidth = charData.width;
-                }
-              }
-              if (charLine.length > 0) {
-                lines.push(charLine);
-              }
-              currentLine = [];
-              currentWidth = 0;
-            } else {
-              if (currentLine.length > 0) {
-                lines.push(currentLine);
-              }
-              currentLine = [data];
-              currentWidth = data.totalWidth;
+            // Word doesn't fit - start new line
+            if (currentLine.length > 0) {
+              lines.push(currentLine);
             }
+            // Start new line with this word
+            currentLine = [data];
+            currentWidth = wordWidth;
           }
         }
+        // Push the last line
         if (currentLine.length > 0) {
           lines.push(currentLine);
         }
@@ -370,13 +352,12 @@
           let xOffset = padding;
           const yOffset = yBase + (lineIdx * lineHeight);
           
-          for (let itemIdx = 0; itemIdx < lineData.length; itemIdx++) {
-            const item = lineData[itemIdx];
-            const isChar = !item.char;
-            const chars = isChar ? item : [item];
+          for (let wordIdx = 0; wordIdx < lineData.length; wordIdx++) {
+            const data = lineData[wordIdx];
             
-            for (let charData of chars) {
-              const ch = charData.char || charData;
+            for (let charIdx = 0; charIdx < data.chars.length; charIdx++) {
+              const charData = data.chars[charIdx];
+              const ch = charData.char;
               const strokes = letterStrokes[ch] || letterStrokes['A'];
               
               for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
@@ -400,9 +381,9 @@
                   strokeNum: ++strokeCounter
                 });
               }
-              xOffset += (charData.width || charWidth * scaleFactor * 0.9 + 6);
+              xOffset += charData.width;
             }
-            if (itemIdx < lineData.length - 1) xOffset += gap * scaleFactor;
+            if (wordIdx < lineData.length - 1) xOffset += gap * scaleFactor;
           }
         }
 
@@ -569,18 +550,19 @@
         }
       });
 
-      // ----- Initial load with resize handling -----
+      // ----- Handle resize for responsive line breaks -----
+      let resizeTimeout;
       function handleResize() {
-        const text = inputField.value || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        renderAndAnimate(text);
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+          const text = inputField.value || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+          renderAndAnimate(text);
+        }, 300);
       }
 
-      let resizeTimeout;
-      window.addEventListener('resize', () => {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(handleResize, 300);
-      });
+      window.addEventListener('resize', handleResize);
 
+      // ----- Initial load -----
       window.addEventListener('load', () => {
         inputField.value = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         setTimeout(startTrace, 100);
