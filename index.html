@@ -178,14 +178,14 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">Fixed animation · No infinite loading</div>
+    <div class="subhead">Fixed tracing · Larger text · Proper spacing</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
     <div class="controls">
       <div class="input-group">
         <label for="wordInput">Text</label>
-        <input type="text" id="wordInput" placeholder="e.g. ABC, hello" value="ABC" />
+        <input type="text" id="wordInput" placeholder="e.g. ABC, hello" value="ABCDEFGHIJKLMNOPQRSTUVWXYZ" />
       </div>
       <div class="btn-group">
         <button class="btn btn-primary" id="traceBtn">▶ Trace</button>
@@ -211,7 +211,7 @@
       const statusLabel = document.getElementById('statusLabel');
       const inputField = document.getElementById('wordInput');
 
-      // ----- Letter stroke data (simplified paths) -----
+      // ----- Letter stroke data (KanjiVG format) -----
       const letterStrokes = {
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
         'B': ['M20,15 L20,85', 'M20,25 C35,25 50,25 55,35 C60,45 55,55 45,55 C55,55 60,65 55,75 C50,85 35,85 20,85'],
@@ -278,7 +278,7 @@
         ' ': []
       };
 
-      // ----- Parse SVG path to points -----
+      // ----- Parse SVG path to points (with better curve handling) -----
       function parsePathToPoints(pathData) {
         const points = [];
         const commands = pathData.match(/[MLCQASZ][^MLCQASZ]*/gi);
@@ -304,7 +304,8 @@
               const cp2x = nums[i+2], cp2y = nums[i+3];
               const endX = nums[i+4], endY = nums[i+5];
               
-              for (let t = 0.05; t <= 1; t += 0.05) {
+              // More segments for smoother curves
+              for (let t = 0.02; t <= 1; t += 0.02) {
                 const mt = 1 - t;
                 const px = Math.pow(mt, 3) * currentX + 
                           3 * Math.pow(mt, 2) * t * cp1x +
@@ -324,7 +325,7 @@
               const cpx = nums[i], cpy = nums[i+1];
               const endX = nums[i+2], endY = nums[i+3];
               
-              for (let t = 0.05; t <= 1; t += 0.05) {
+              for (let t = 0.02; t <= 1; t += 0.02) {
                 const mt = 1 - t;
                 const px = Math.pow(mt, 2) * currentX +
                           2 * mt * t * cpx +
@@ -343,33 +344,26 @@
         return points;
       }
 
-      // ----- Generate SVG from text using path points -----
+      // ----- Generate SVG from text -----
       function generateSVG(text) {
         if (!text) return null;
         
         const words = text.split(' ');
-        let xOffset = 30;
+        let xOffset = 25;
         const yBase = 55;
-        const charWidth = 45;
-        const gap = 20;
+        const charWidth = 52;
+        const gap = 28;
         const svgWidth = 800;
         const svgHeight = 400;
-
-        let totalWidth = 0;
-        for (let w of words) {
-          totalWidth += w.length * charWidth + (w.length - 1) * 6;
-        }
-        totalWidth += (words.length - 1) * gap;
-        let scaleFactor = 1;
-        if (totalWidth > svgWidth - 40) {
-          scaleFactor = (svgWidth - 40) / totalWidth;
-        }
+        const scaleFactor = 1.0;
 
         let allPaths = [];
         let strokeCounter = 0;
 
         for (let wIdx = 0; wIdx < words.length; wIdx++) {
           const word = words[wIdx];
+          let wordWidth = 0;
+          
           for (let chIdx = 0; chIdx < word.length; chIdx++) {
             const ch = word[chIdx];
             const strokes = letterStrokes[ch] || letterStrokes['A'];
@@ -378,10 +372,9 @@
               const pathData = strokes[sIdx];
               const points = parsePathToPoints(pathData);
               
-              // Scale and position points
               const scaledPoints = points.map(p => ({
-                x: p.x * scaleFactor * 0.8 + xOffset + 20,
-                y: p.y * scaleFactor * 0.8 + yBase + 20
+                x: p.x * scaleFactor * 0.9 + xOffset + 15,
+                y: p.y * scaleFactor * 0.9 + yBase + 20
               }));
               
               if (scaledPoints.length > 1) {
@@ -391,14 +384,15 @@
                 });
               }
             }
-            xOffset += charWidth * scaleFactor * 0.8 + 8;
+            xOffset += charWidth * scaleFactor * 0.9 + 6;
+            wordWidth += charWidth * scaleFactor * 0.9 + 6;
           }
           if (wIdx < words.length - 1) xOffset += gap * scaleFactor;
         }
 
         // Build SVG with path data
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
-        svg += `<g style="fill:none;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
+        svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
         allPaths.forEach(p => {
           const d = p.points.map((pt, i) => (i === 0 ? 'M' : 'L') + pt.x + ',' + pt.y).join(' ');
           svg += `<path d="${d}" data-stroke="${p.strokeNum}" data-points="${p.points.length}" />`;
@@ -409,7 +403,7 @@
         return svg;
       }
 
-      // ----- Self-contained animation engine -----
+      // ----- Animation engine (with proper completion) -----
       function animateStrokes(svgElement, duration = 500) {
         const paths = svgElement.querySelectorAll('path');
         if (!paths.length) {
@@ -418,12 +412,11 @@
         }
 
         const totalStrokes = paths.length;
-        let currentStroke = 0;
         let startTime = null;
         let animationId = null;
         let completed = false;
 
-        // Store point data for each path
+        // Store path data
         const pathData = [];
         paths.forEach(path => {
           const d = path.getAttribute('d');
@@ -433,7 +426,12 @@
               const parts = p.slice(1).split(',');
               return { x: parseFloat(parts[0]), y: parseFloat(parts[1]) };
             });
-            pathData.push({ path, points: coords, total: coords.length });
+            pathData.push({ 
+              path, 
+              points: coords, 
+              total: coords.length,
+              strokeNum: parseInt(path.getAttribute('data-stroke'))
+            });
           }
         });
 
@@ -441,26 +439,24 @@
           if (!startTime) startTime = timestamp;
           const elapsed = timestamp - startTime;
           
-          // Calculate which stroke we're on
-          const strokeIndex = Math.min(Math.floor(elapsed / duration), totalStrokes - 1);
-          const strokeProgress = Math.min((elapsed % duration) / duration, 1);
+          // Calculate which stroke and progress
+          const totalTime = totalStrokes * duration;
+          const progress = Math.min(elapsed / totalTime, 1);
+          const strokeIndex = Math.min(Math.floor(progress * totalStrokes), totalStrokes - 1);
+          const strokeProgress = Math.min((progress * totalStrokes) - strokeIndex, 1);
           
-          // Clear and redraw all strokes
+          // Clear and redraw
           const svg = svgElement.querySelector('g');
           if (!svg) return;
-          
-          // Clear existing paths
           svg.innerHTML = '';
           
-          // Draw completed strokes and current stroke
+          // Draw all strokes up to current
           for (let i = 0; i <= strokeIndex && i < pathData.length; i++) {
             const data = pathData[i];
-            const total = data.total;
-            let drawCount = total;
+            let drawCount = data.total;
             
             if (i === strokeIndex) {
-              // Current stroke: draw partially
-              drawCount = Math.max(1, Math.floor(strokeProgress * total));
+              drawCount = Math.max(1, Math.floor(strokeProgress * data.total));
             }
             
             if (drawCount > 0) {
@@ -468,71 +464,72 @@
               const d = pts.map((pt, idx) => (idx === 0 ? 'M' : 'L') + pt.x + ',' + pt.y).join(' ');
               const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
               path.setAttribute('d', d);
-              path.setAttribute('data-stroke', i + 1);
               path.style.fill = 'none';
               path.style.stroke = '#1e293b';
-              path.style.strokeWidth = '4.5';
+              path.style.strokeWidth = '4';
               path.style.strokeLinecap = 'round';
               path.style.strokeLinejoin = 'round';
               svg.appendChild(path);
               
-              // Add stroke number
-              if (i < strokeIndex || (i === strokeIndex && strokeProgress > 0.3)) {
-                const midIdx = Math.min(Math.floor(drawCount / 2), drawCount - 1);
-                const mid = pts[midIdx] || pts[0];
-                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                text.setAttribute('x', mid.x);
-                text.setAttribute('y', mid.y - 12);
-                text.setAttribute('text-anchor', 'middle');
-                text.setAttribute('font-size', '14');
-                text.setAttribute('font-weight', 'bold');
-                text.setAttribute('fill', '#0f172a');
-                text.setAttribute('style', 'font-family: Inter, sans-serif;');
-                text.textContent = i + 1;
+              // Add stroke number for completed strokes
+              if (i < strokeIndex && strokeProgress > 0.1) {
+                const midIdx = Math.min(Math.floor(data.total / 2), data.total - 1);
+                const mid = data.points[midIdx] || data.points[0];
                 
-                // Background for number
+                // Background
                 const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                const textWidth = (i + 1).toString().length * 9 + 12;
+                const num = (i + 1).toString();
+                const textWidth = num.length * 10 + 14;
                 bg.setAttribute('x', mid.x - textWidth/2);
-                bg.setAttribute('y', mid.y - 20);
+                bg.setAttribute('y', mid.y - 22);
                 bg.setAttribute('width', textWidth);
-                bg.setAttribute('height', '20');
-                bg.setAttribute('rx', '10');
+                bg.setAttribute('height', '22');
+                bg.setAttribute('rx', '11');
                 bg.setAttribute('fill', 'rgba(255,255,255,0.92)');
-                bg.setAttribute('stroke', '#e2e8f0');
+                bg.setAttribute('stroke', '#d1d5db');
                 bg.setAttribute('stroke-width', '1');
                 svg.appendChild(bg);
+                
+                // Number text
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', mid.x);
+                text.setAttribute('y', mid.y + 2);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('font-size', '13');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('fill', '#0f172a');
+                text.setAttribute('font-family', 'Inter, sans-serif');
+                text.textContent = num;
                 svg.appendChild(text);
                 
-                // Add start/end markers
-                if (i < strokeIndex) {
-                  // Start marker (green)
+                // Start marker (green)
+                if (i > 0) {
                   const start = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                  start.setAttribute('cx', pts[0].x);
-                  start.setAttribute('cy', pts[0].y);
+                  start.setAttribute('cx', data.points[0].x);
+                  start.setAttribute('cy', data.points[0].y);
                   start.setAttribute('r', '4');
                   start.setAttribute('fill', '#22c55e');
                   svg.appendChild(start);
-                  
-                  // End marker (red)
-                  const end = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                  end.setAttribute('cx', pts[pts.length - 1].x);
-                  end.setAttribute('cy', pts[pts.length - 1].y);
-                  end.setAttribute('r', '4');
-                  end.setAttribute('fill', '#ef4444');
-                  svg.appendChild(end);
                 }
+                
+                // End marker (red)
+                const end = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                end.setAttribute('cx', data.points[data.points.length - 1].x);
+                end.setAttribute('cy', data.points[data.points.length - 1].y);
+                end.setAttribute('r', '4');
+                end.setAttribute('fill', '#ef4444');
+                svg.appendChild(end);
               }
             }
           }
 
           // Update status
-          const progress = Math.round(((strokeIndex + strokeProgress) / totalStrokes) * 100);
+          const percent = Math.round(progress * 100);
           const done = Math.min(strokeIndex + 1, totalStrokes);
-          statusLabel.textContent = `⏳ ${Math.min(progress, 100)}% · ${Math.min(done, totalStrokes)}/${totalStrokes}`;
+          statusLabel.textContent = `⏳ ${percent}% · ${done}/${totalStrokes}`;
 
-          // Check if complete
-          if (strokeIndex >= totalStrokes - 1 && strokeProgress >= 1) {
+          // Check completion
+          if (progress >= 1) {
             completed = true;
             statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes traced`;
             return;
@@ -541,7 +538,6 @@
           animationId = requestAnimationFrame(animate);
         }
 
-        // Start animation
         animationId = requestAnimationFrame(animate);
 
         return () => {
@@ -554,16 +550,13 @@
 
       // ----- Render and animate -----
       let cancelAnimation = null;
-      let isAnimating = false;
 
       function renderAndAnimate(text) {
-        // Clean up previous
         if (cancelAnimation) {
           cancelAnimation();
           cancelAnimation = null;
         }
         container.innerHTML = '';
-        isAnimating = false;
 
         const svgString = generateSVG(text);
         if (!svgString) {
@@ -583,15 +576,13 @@
         svgElement.style.height = '100%';
         svgElement.style.display = 'block';
 
-        // Start animation
-        isAnimating = true;
         statusLabel.textContent = '▶ Animating...';
         cancelAnimation = animateStrokes(svgElement, 500);
       }
 
       // ----- Public functions -----
       function startTrace() {
-        const text = inputField.value || 'ABC';
+        const text = inputField.value || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         renderAndAnimate(text);
       }
 
@@ -601,7 +592,6 @@
           cancelAnimation = null;
         }
         container.innerHTML = '';
-        isAnimating = false;
         statusLabel.textContent = '⏺ Cleared';
         container.innerHTML = '<div style="color:#94a3b8;padding:2rem;text-align:center;">Enter text and click Trace</div>';
       }
@@ -610,7 +600,7 @@
         startTrace();
       }
 
-      // ----- UI Event Listeners -----
+      // ----- UI -----
       document.getElementById('traceBtn').addEventListener('click', startTrace);
       document.getElementById('clearBtn').addEventListener('click', clearTrace);
       document.getElementById('resetBtn').addEventListener('click', resetTrace);
@@ -624,7 +614,7 @@
 
       // ----- Initial load -----
       window.addEventListener('load', () => {
-        inputField.value = 'ABC';
+        inputField.value = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         setTimeout(startTrace, 100);
       });
 
