@@ -287,55 +287,48 @@
       function generateSVG(text) {
         if (!text) return null;
         
-        // Get container width for accurate line breaks
+        // Get container width
         const containerWidth = container.clientWidth || 780;
         const svgWidth = Math.min(containerWidth, 780);
         const charWidth = 50;
-        const gap = 30;
         const scaleFactor = 1.0;
         const padding = 30;
         const maxWidth = svgWidth - (padding * 2);
         const lineHeight = 90;
         const yBase = 55;
 
-        const words = text.split(' ');
+        // Split into characters with widths
+        const chars = [];
+        for (let ch of text) {
+          const width = charWidth * scaleFactor * 0.9 + 6;
+          chars.push({ char: ch, width: width });
+        }
 
-        // Calculate exact width for each character and word
-        const wordData = words.map(word => {
-          let totalWidth = 0;
-          const chars = [];
-          for (let ch of word) {
-            const chWidth = charWidth * scaleFactor * 0.9 + 6;
-            totalWidth += chWidth;
-            chars.push({ char: ch, width: chWidth });
-          }
-          return { word, chars, totalWidth };
-        });
-
-        // Layout with correct line break logic
+        // Layout characters into lines with proper boundary checking
         const lines = [];
         let currentLine = [];
         let currentWidth = 0;
 
-        for (let i = 0; i < wordData.length; i++) {
-          const data = wordData[i];
+        for (let i = 0; i < chars.length; i++) {
+          const charData = chars[i];
+          const charWidth_ = charData.width;
           
-          // Check if adding this word would exceed the max width
-          const wordWidth = data.totalWidth;
-          const spacing = currentLine.length > 0 ? gap : 0;
+          // Check if adding this character would exceed max width
+          // We check with the character width included
+          const testWidth = currentWidth + charWidth_ + (currentLine.length > 0 ? 6 : 0);
           
-          if (currentWidth + wordWidth + spacing <= maxWidth) {
-            // Word fits on current line
-            currentLine.push(data);
-            currentWidth += wordWidth + spacing;
+          if (testWidth <= maxWidth) {
+            // Character fits on current line
+            currentLine.push(charData);
+            currentWidth = testWidth;
           } else {
-            // Word doesn't fit - start new line
+            // Character doesn't fit - start new line
             if (currentLine.length > 0) {
               lines.push(currentLine);
             }
-            // Start new line with this word
-            currentLine = [data];
-            currentWidth = wordWidth;
+            // Start new line with this character
+            currentLine = [charData];
+            currentWidth = charWidth_;
           }
         }
         // Push the last line
@@ -352,38 +345,33 @@
           let xOffset = padding;
           const yOffset = yBase + (lineIdx * lineHeight);
           
-          for (let wordIdx = 0; wordIdx < lineData.length; wordIdx++) {
-            const data = lineData[wordIdx];
+          for (let charIdx = 0; charIdx < lineData.length; charIdx++) {
+            const charData = lineData[charIdx];
+            const ch = charData.char;
+            const strokes = letterStrokes[ch] || letterStrokes['A'];
             
-            for (let charIdx = 0; charIdx < data.chars.length; charIdx++) {
-              const charData = data.chars[charIdx];
-              const ch = charData.char;
-              const strokes = letterStrokes[ch] || letterStrokes['A'];
+            for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
+              const pathData = strokes[sIdx];
               
-              for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
-                const pathData = strokes[sIdx];
-                
-                const transformed = pathData.replace(/([MLCQA])([^MLCQA]*)/g, (match, cmd, coords) => {
-                  const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
-                  const scaled = nums.map((n, i) => {
-                    const val = n * scaleFactor * 0.9;
-                    if (i % 2 === 0) {
-                      return val + xOffset + 15;
-                    } else {
-                      return val + yOffset + 20;
-                    }
-                  });
-                  return cmd + scaled.join(' ');
+              const transformed = pathData.replace(/([MLCQA])([^MLCQA]*)/g, (match, cmd, coords) => {
+                const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
+                const scaled = nums.map((n, i) => {
+                  const val = n * scaleFactor * 0.9;
+                  if (i % 2 === 0) {
+                    return val + xOffset + 15;
+                  } else {
+                    return val + yOffset + 20;
+                  }
                 });
-                
-                allPaths.push({
-                  d: transformed,
-                  strokeNum: ++strokeCounter
-                });
-              }
-              xOffset += charData.width;
+                return cmd + scaled.join(' ');
+              });
+              
+              allPaths.push({
+                d: transformed,
+                strokeNum: ++strokeCounter
+              });
             }
-            if (wordIdx < lineData.length - 1) xOffset += gap * scaleFactor;
+            xOffset += charData.width;
           }
         }
 
