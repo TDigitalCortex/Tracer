@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter Tracer · Kanji-Animate Logic</title>
+  <title>Letter Tracer · KanjiVgAnimate Style</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
@@ -170,7 +170,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">Using Kanji-Animate's SVG stroke logic</div>
+    <div class="subhead">Using KanjiVgAnimate-style SVG paths with proper curves</div>
     <div class="canvas-wrapper">
       <canvas id="tracerCanvas" width="800" height="400"></canvas>
     </div>
@@ -197,23 +197,18 @@
 
   <script>
     (function() {
-      // ============================================================
-      // KANJI-ANIMATE CORE LOGIC (adapted from the GitHub repo)
-      // ============================================================
-      
       const canvas = document.getElementById('tracerCanvas');
       const ctx = canvas.getContext('2d');
       const W = canvas.width, H = canvas.height;
 
-      // ----- State (matches Kanji-Animate's animation state) -----
+      // ----- State -----
       let currentStrokes = [];
       let animating = false;
       let animationId = null;
-      let currentStroke = 0;
       let currentPoint = 0;
-      const ANIMATION_SPEED = 2; // points per frame
+      const ANIMATION_SPEED = 1.8;
 
-      // ----- SVG Path parser (from Kanji-Animate) -----
+      // ----- SVG Path parser (from KanjiVgAnimate) -----
       function parseSVGPath(d) {
         const points = [];
         const commands = d.match(/[a-zA-Z][^a-zA-Z]*/g);
@@ -240,7 +235,7 @@
               points.push({ x: currentX, y: currentY });
             }
           } else if (type === 'C' || type === 'c') {
-            // Cubic bezier - approximate with line segments
+            // Cubic bezier - high precision with 20 segments
             for (let i = 0; i < nums.length; i += 6) {
               const cp1x = nums[i], cp1y = nums[i+1];
               const cp2x = nums[i+2], cp2y = nums[i+3];
@@ -248,8 +243,8 @@
               const endX = type === 'c' ? currentX + x : x;
               const endY = type === 'c' ? currentY + y : y;
               
-              // Simple approximation: 10 segments per bezier
-              for (let t = 0.1; t <= 1; t += 0.1) {
+              // 20 segments for smooth curves
+              for (let t = 0.05; t <= 1; t += 0.05) {
                 const mt = 1 - t;
                 const px = Math.pow(mt, 3) * currentX + 
                           3 * Math.pow(mt, 2) * t * (type === 'c' ? currentX + cp1x : cp1x) +
@@ -272,7 +267,7 @@
               const endX = type === 'q' ? currentX + x : x;
               const endY = type === 'q' ? currentY + y : y;
               
-              for (let t = 0.1; t <= 1; t += 0.1) {
+              for (let t = 0.05; t <= 1; t += 0.05) {
                 const mt = 1 - t;
                 const px = Math.pow(mt, 2) * currentX +
                           2 * mt * t * (type === 'q' ? currentX + cpx : cpx) +
@@ -280,6 +275,46 @@
                 const py = Math.pow(mt, 2) * currentY +
                           2 * mt * t * (type === 'q' ? currentY + cpy : cpy) +
                           Math.pow(t, 2) * endY;
+                points.push({ x: px, y: py });
+              }
+              currentX = endX;
+              currentY = endY;
+            }
+          } else if (type === 'A' || type === 'a') {
+            // Arc - approximate with curve
+            // Simplified: just draw a bezier approximation
+            for (let i = 0; i < nums.length; i += 7) {
+              const rx = nums[i], ry = nums[i+1];
+              const x = nums[i+5], y = nums[i+6];
+              const endX = type === 'a' ? currentX + x : x;
+              const endY = type === 'a' ? currentY + y : y;
+              
+              // Simple arc approximation
+              const midX = (currentX + endX) / 2;
+              const midY = (currentY + endY) / 2;
+              const dx = endX - currentX;
+              const dy = endY - currentY;
+              const dist = Math.sqrt(dx*dx + dy*dy);
+              
+              // Control point perpendicular to line
+              const perpX = -dy / dist * rx * 0.5;
+              const perpY = dx / dist * ry * 0.5;
+              
+              const cp1x = currentX + dx/3 + perpX;
+              const cp1y = currentY + dy/3 + perpY;
+              const cp2x = currentX + 2*dx/3 + perpX;
+              const cp2y = currentY + 2*dy/3 + perpY;
+              
+              for (let t = 0.05; t <= 1; t += 0.05) {
+                const mt = 1 - t;
+                const px = Math.pow(mt, 3) * currentX + 
+                          3 * Math.pow(mt, 2) * t * cp1x +
+                          3 * mt * Math.pow(t, 2) * cp2x +
+                          Math.pow(t, 3) * endX;
+                const py = Math.pow(mt, 3) * currentY +
+                          3 * Math.pow(mt, 2) * t * cp1y +
+                          3 * mt * Math.pow(t, 2) * cp2y +
+                          Math.pow(t, 3) * endY;
                 points.push({ x: px, y: py });
               }
               currentX = endX;
@@ -293,8 +328,7 @@
         return points;
       }
 
-      // ----- SVG Stroke data for English letters (from KanjiVG format) -----
-      // Each letter is an array of SVG path strings (one per stroke)
+      // ----- SVG Path data with proper curves for all letters (KanjiVgAnimate style) -----
       const letterSVG = {
         'A': [
           'M25,85 L40,15 L55,85',
@@ -302,15 +336,14 @@
         ],
         'B': [
           'M20,15 L20,85',
-          'M20,25 L50,25 L65,40 L50,55 L20,55',
-          'M20,55 L50,55 L65,70 L50,85 L20,85'
+          'M20,25 C35,25 50,25 55,35 C60,45 55,55 45,55 C55,55 60,65 55,75 C50,85 35,85 20,85'
         ],
         'C': [
-          'M65,25 L45,15 L20,20 L10,45 L20,75 L45,80 L65,70'
+          'M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'
         ],
         'D': [
           'M20,15 L20,85',
-          'M20,25 L55,25 L70,50 L55,75 L20,85'
+          'M20,25 C40,25 60,25 65,45 C70,65 60,85 40,85 C25,85 20,85 20,85'
         ],
         'E': [
           'M20,15 L60,15',
@@ -324,7 +357,7 @@
           'M20,50 L50,50'
         ],
         'G': [
-          'M65,25 L45,15 L20,20 L10,45 L20,75 L45,80 L65,70',
+          'M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50',
           'M65,50 L45,50',
           'M45,50 L45,40'
         ],
@@ -339,13 +372,13 @@
           'M15,85 L65,85'
         ],
         'J': [
-          'M65,15 L65,65 L50,85 L25,80 L15,60',
+          'M65,15 L65,60 C65,75 55,85 40,85 C25,85 15,75 15,60',
           'M15,15 L15,30'
         ],
         'K': [
           'M20,15 L20,85',
-          'M20,50 L60,15',
-          'M20,50 L60,85'
+          'M20,50 C35,40 50,25 60,15',
+          'M20,50 C35,60 50,75 60,85'
         ],
         'L': [
           'M20,15 L20,85',
@@ -353,208 +386,210 @@
         ],
         'M': [
           'M15,15 L15,85',
-          'M15,15 L40,55',
-          'M40,55 L65,15',
+          'M15,15 C25,40 35,55 40,55',
+          'M40,55 C45,55 55,40 65,15',
           'M65,15 L65,85'
         ],
         'N': [
           'M20,15 L20,85',
-          'M20,15 L60,85',
+          'M20,15 C35,35 50,60 60,85',
           'M60,15 L60,85'
         ],
         'O': [
-          'M40,15 L20,30 L15,55 L30,80 L55,85 L70,65 L70,40 L55,20 L40,15'
+          'M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'
         ],
         'P': [
           'M20,15 L20,85',
-          'M20,25 L55,25 L70,45 L55,65 L20,65'
+          'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65'
         ],
         'Q': [
-          'M40,15 L20,30 L15,55 L30,80 L55,85 L70,65 L70,40 L55,20 L40,15',
+          'M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15',
           'M60,65 L75,80'
         ],
         'R': [
           'M20,15 L20,85',
-          'M20,25 L55,25 L70,45 L55,65 L20,65',
+          'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65',
           'M45,65 L65,85'
         ],
         'S': [
-          'M65,25 L45,15 L15,20 L10,45 L25,55 L50,60 L60,75 L45,85 L15,80'
+          'M65,25 C55,15 35,15 25,20 C15,30 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80 C15,75 10,65 10,60'
         ],
         'T': [
           'M10,15 L70,15',
           'M40,15 L40,85'
         ],
         'U': [
-          'M20,15 L20,65 L35,85 L65,85 L80,65 L80,15'
+          'M20,15 L20,60 C20,75 30,85 45,85 C60,85 70,75 70,60 L70,15'
         ],
         'V': [
-          'M10,15 L40,85 L70,15'
+          'M10,15 C25,50 35,75 40,85 C45,75 55,50 70,15'
         ],
         'W': [
-          'M10,15 L25,70 L40,40 L55,70 L70,15'
+          'M10,15 C20,40 25,60 30,70 C35,60 40,40 45,45 C50,40 55,60 60,70 C65,60 70,40 80,15'
         ],
         'X': [
-          'M20,15 L60,85',
-          'M60,15 L20,85'
+          'M20,15 C35,40 45,65 60,85',
+          'M60,15 C45,40 35,65 20,85'
         ],
         'Y': [
-          'M10,15 L40,55',
-          'M40,55 L70,15',
-          'M40,55 L40,85'
+          'M10,15 C25,40 35,55 40,60',
+          'M40,60 C45,55 55,40 70,15',
+          'M40,60 L40,85'
         ],
         'Z': [
           'M10,15 L70,15',
-          'M70,15 L10,85',
+          'M70,15 C50,40 30,65 10,85',
           'M10,85 L70,85'
         ],
         'a': [
-          'M55,25 L35,15 L15,25 L10,50 L25,70 L50,70 L65,55',
+          'M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60',
           'M65,25 L65,55',
-          'M65,55 L60,70'
+          'M65,55 C60,70 50,75 40,70'
         ],
         'b': [
           'M20,15 L20,75',
-          'M20,30 L45,25 L60,40 L50,60 L25,65'
+          'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'
         ],
         'c': [
-          'M60,30 L40,20 L20,30 L15,55 L30,70 L55,65'
+          'M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'
         ],
         'd': [
           'M60,15 L60,75',
-          'M60,30 L35,25 L20,40 L30,60 L55,65'
+          'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'
         ],
         'e': [
-          'M60,25 L40,15 L15,25 L20,50 L40,55 L60,50',
+          'M60,25 C45,15 25,15 15,25 C5,40 10,55 25,60 C40,65 60,60 65,50',
           'M20,40 L50,40'
         ],
         'f': [
           'M30,15 L45,15',
           'M40,15 L40,75',
-          'M20,30 L55,30'
+          'M20,30 C35,30 50,30 55,30'
         ],
         'g': [
-          'M55,25 L35,15 L15,25 L10,50 L30,70 L55,65',
-          'M55,45 L55,70 L45,85 L20,80 L10,65',
-          'M10,65 L10,55'
+          'M55,25 C40,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,65 60,55',
+          'M60,45 C60,60 60,75 50,85 C35,90 20,85 15,70',
+          'M15,70 C10,60 10,55 15,50'
         ],
         'h': [
           'M20,15 L20,75',
-          'M20,30 L45,25 L60,40 L60,65'
+          'M20,30 C35,25 50,25 60,35 C70,50 60,65 45,65'
         ],
         'i': [
           'M30,15 L30,23',
-          'M30,33 L30,65',
-          'M30,33 L20,50'
+          'M30,33 C30,45 30,60 30,65',
+          'M30,33 C25,40 20,45 20,50'
         ],
         'j': [
           'M45,15 L45,23',
-          'M45,33 L45,65 L35,80 L20,75',
-          'M45,33 L35,50'
+          'M45,33 C45,50 45,65 40,75 C35,85 20,85 15,75',
+          'M45,33 C40,40 35,45 35,50'
         ],
         'k': [
           'M20,15 L20,75',
-          'M20,35 L50,15',
-          'M20,35 L50,65'
+          'M20,35 C30,30 40,20 50,15',
+          'M20,35 C30,40 40,50 50,65'
         ],
         'l': [
           'M20,15 L20,75',
-          'M20,75 L30,80'
+          'M20,75 C25,80 30,80 30,80'
         ],
         'm': [
           'M15,75 L15,25',
-          'M15,25 L35,45',
-          'M35,45 L55,25',
+          'M15,25 C25,35 30,45 35,45',
+          'M35,45 C40,45 45,35 55,25',
           'M55,25 L55,75'
         ],
         'n': [
           'M20,75 L20,25',
-          'M20,25 L45,25 L55,40 L55,65'
+          'M20,25 C35,25 45,25 55,35 C65,45 60,65 45,65'
         ],
         'o': [
-          'M35,20 L15,35 L20,65 L45,70 L60,55 L55,25 L35,20'
+          'M35,20 C20,20 10,35 15,55 C20,70 35,75 50,70 C65,65 70,45 60,30 C50,20 40,20 35,20'
         ],
         'p': [
           'M20,20 L20,85',
-          'M20,30 L45,25 L60,40 L50,60 L25,65'
+          'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'
         ],
         'q': [
           'M60,20 L60,85',
-          'M60,30 L35,25 L20,40 L30,60 L55,65'
+          'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'
         ],
         'r': [
           'M20,20 L20,65',
-          'M20,25 L40,20 L60,30'
+          'M20,25 C30,20 45,20 60,30'
         ],
         's': [
-          'M60,30 L40,20 L15,25 L20,45 L40,50 L55,60 L45,75 L20,70'
+          'M60,30 C45,20 25,20 15,25 C5,35 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80'
         ],
         't': [
-          'M20,15 L45,15',
+          'M20,15 C30,15 40,15 45,15',
           'M30,15 L30,70',
-          'M30,35 L50,35'
+          'M30,35 C40,35 50,35 55,35'
         ],
         'u': [
-          'M20,20 L20,60 L35,75 L60,65 L65,40',
-          'M65,20 L65,40'
+          'M20,20 L20,55 C20,65 25,75 40,75 C55,75 65,65 65,50',
+          'M65,20 L65,50'
         ],
         'v': [
-          'M15,20 L35,70 L55,20'
+          'M15,20 C25,45 30,60 35,70 C40,60 45,45 55,20'
         ],
         'w': [
-          'M10,20 L25,65 L40,40 L55,65 L70,20'
+          'M10,20 C20,40 25,55 30,65 C35,55 40,40 45,45 C50,40 55,55 60,65 C65,55 70,40 80,20'
         ],
         'x': [
-          'M15,20 L55,70',
-          'M55,20 L15,70'
+          'M15,20 C30,40 40,60 55,70',
+          'M55,20 C40,40 30,60 15,70'
         ],
         'y': [
-          'M15,20 L40,60',
-          'M40,60 L65,20',
-          'M40,60 L40,80 L30,85'
+          'M15,20 C25,40 35,55 40,60',
+          'M40,60 C45,55 55,40 65,20',
+          'M40,60 C40,70 40,80 35,85 C30,90 20,90 15,85'
         ],
         'z': [
           'M15,20 L65,20',
-          'M65,20 L15,75',
+          'M65,20 C45,40 30,60 15,75',
           'M15,75 L65,75'
         ],
         '0': [
-          'M40,15 L20,30 L15,55 L30,80 L55,85 L70,65 L70,40 L55,20 L40,15'
+          'M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'
         ],
         '1': [
           'M25,30 L40,15 L40,85'
         ],
         '2': [
-          'M15,25 L60,25 L15,60 L60,60 L15,85 L60,85'
+          'M15,25 C35,25 55,25 60,25 C40,40 25,55 15,70 C10,80 20,85 40,85 C55,85 65,80 70,75'
         ],
         '3': [
-          'M15,25 L60,25 L25,50 L60,50 L25,75 L60,75'
+          'M15,25 C40,25 60,25 65,35 C70,45 60,50 40,50 C60,50 65,55 70,65 C75,75 60,85 35,85 C15,85 10,80 10,75'
         ],
         '4': [
-          'M40,15 L40,60 L60,60',
-          'M20,40 L60,40',
+          'M40,15 L40,60 C40,70 50,70 60,70',
+          'M20,40 C35,40 50,40 60,40',
           'M40,60 L40,85'
         ],
         '5': [
-          'M50,20 L15,20 L15,50 L60,50 L60,85 L15,85'
+          'M50,20 C35,20 20,20 15,20 C15,35 15,45 15,50 C35,50 50,50 60,50 C65,65 60,80 40,85 C20,85 15,80 10,75'
         ],
         '6': [
-          'M60,20 L20,20 L15,50 L40,55 L60,50 L50,75 L25,80'
+          'M60,20 C40,20 20,20 15,30 C10,45 15,60 30,65 C50,70 65,60 70,50 C75,40 65,30 50,30',
+          'M30,65 C25,75 20,80 25,85'
         ],
         '7': [
-          'M15,20 L70,20 L40,85'
+          'M15,20 C35,20 55,20 70,20 C60,40 50,60 40,85'
         ],
         '8': [
-          'M40,20 L20,30 L20,60 L40,70 L60,60 L60,30 L40,20',
-          'M40,40 L40,50'
+          'M40,20 C20,20 10,30 15,45 C20,55 35,60 45,60 C60,60 70,50 70,40 C70,25 55,20 40,20',
+          'M40,40 C25,40 15,50 20,65 C25,75 40,80 55,75 C70,70 75,55 65,45 C55,40 45,40 40,40'
         ],
         '9': [
-          'M20,65 L60,65 L65,35 L40,30 L20,35 L30,60 L55,55'
+          'M20,65 C40,65 60,65 65,55 C70,45 65,30 50,25 C35,20 20,25 15,35 C10,45 15,55 30,60',
+          'M50,25 C55,15 60,10 65,10'
         ],
         ' ': []
       };
 
-      // ----- Generate strokes from text (using Kanji-Animate's approach) -----
+      // ----- Generate strokes from text -----
       function generateStrokes(text) {
         if (!text) return [];
         const result = [];
@@ -584,7 +619,6 @@
             
             for (let sIdx = 0; sIdx < paths.length; sIdx++) {
               const pathData = paths[sIdx];
-              // Parse SVG path to points
               let points = parseSVGPath(pathData);
               
               // Scale and position
@@ -607,14 +641,14 @@
         return result;
       }
 
-      // ----- Drawing (adapted from Kanji-Animate's render) -----
+      // ----- Drawing functions (KanjiVgAnimate style) -----
       function drawStroke(stroke, progress = 1, showNumber = true) {
         if (!stroke || stroke.points.length < 2) return;
         const pts = stroke.points;
         const total = pts.length;
         const drawCount = Math.max(1, Math.floor(progress * total));
 
-        // Main stroke
+        // Main stroke with smooth rendering
         ctx.save();
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 4.5;
@@ -628,7 +662,7 @@
         ctx.stroke();
         ctx.restore();
 
-        // Start marker
+        // Start marker (green dot)
         if (progress > 0.01) {
           ctx.save();
           ctx.fillStyle = '#22c55e';
@@ -640,7 +674,7 @@
           ctx.restore();
         }
 
-        // End marker
+        // End marker (red dot)
         if (progress >= 0.99) {
           ctx.save();
           ctx.fillStyle = '#ef4444';
@@ -652,7 +686,7 @@
           ctx.restore();
         }
 
-        // Stroke number
+        // Stroke number badge
         if (showNumber && progress >= 0.3) {
           const midIdx = Math.floor(total / 2);
           const mid = pts[midIdx] || pts[0];
@@ -704,7 +738,7 @@
         }
       }
 
-      // ----- Main draw (Kanji-Animate style) -----
+      // ----- Main draw -----
       function drawAll(progress = 1) {
         ctx.clearRect(0, 0, W, H);
 
@@ -757,7 +791,7 @@
         }
       }
 
-      // ----- Animation loop (Kanji-Animate style) -----
+      // ----- Animation loop (KanjiVgAnimate style) -----
       function animate() {
         if (!animating) return;
         currentPoint += ANIMATION_SPEED;
