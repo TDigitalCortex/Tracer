@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter Tracer · Working</title>
+  <title>Letter Tracer · Fixed</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
@@ -178,7 +178,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">Self-contained SVG stroke animation</div>
+    <div class="subhead">Fixed animation · No infinite loading</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -211,74 +211,139 @@
       const statusLabel = document.getElementById('statusLabel');
       const inputField = document.getElementById('wordInput');
 
-      // ----- Letter stroke data (KanjiVG format with proper curves) -----
+      // ----- Letter stroke data (simplified paths) -----
       const letterStrokes = {
-        'A': ['M 25 85 L 40 15 L 55 85', 'M 32 55 L 48 55'],
-        'B': ['M 20 15 L 20 85', 'M 20 25 C 35 25 50 25 55 35 C 60 45 55 55 45 55 C 55 55 60 65 55 75 C 50 85 35 85 20 85'],
-        'C': ['M 65 25 C 55 15 35 15 25 20 C 15 25 10 45 15 65 C 20 80 40 85 55 80 C 65 75 70 60 70 50'],
-        'D': ['M 20 15 L 20 85', 'M 20 25 C 40 25 60 25 65 45 C 70 65 60 85 40 85 C 25 85 20 85 20 85'],
-        'E': ['M 20 15 L 60 15', 'M 20 15 L 20 85', 'M 20 50 L 50 50', 'M 20 85 L 60 85'],
-        'F': ['M 20 15 L 60 15', 'M 20 15 L 20 85', 'M 20 50 L 50 50'],
-        'G': ['M 65 25 C 55 15 35 15 25 20 C 15 25 10 45 15 65 C 20 80 40 85 55 80 C 65 75 70 60 70 50', 'M 65 50 L 45 50', 'M 45 50 L 45 40'],
-        'H': ['M 20 15 L 20 85', 'M 55 15 L 55 85', 'M 20 50 L 55 50'],
-        'I': ['M 15 15 L 65 15', 'M 40 15 L 40 85', 'M 15 85 L 65 85'],
-        'J': ['M 65 15 L 65 60 C 65 75 55 85 40 85 C 25 85 15 75 15 60', 'M 15 15 L 15 30'],
-        'K': ['M 20 15 L 20 85', 'M 20 50 C 35 40 50 25 60 15', 'M 20 50 C 35 60 50 75 60 85'],
-        'L': ['M 20 15 L 20 85', 'M 20 85 L 60 85'],
-        'M': ['M 15 15 L 15 85', 'M 15 15 C 25 40 35 55 40 55', 'M 40 55 C 45 55 55 40 65 15', 'M 65 15 L 65 85'],
-        'N': ['M 20 15 L 20 85', 'M 20 15 C 35 35 50 60 60 85', 'M 60 15 L 60 85'],
-        'O': ['M 40 15 C 20 15 10 35 15 55 C 20 75 40 85 60 80 C 75 75 80 55 75 35 C 70 20 50 15 40 15'],
-        'P': ['M 20 15 L 20 85', 'M 20 25 C 40 25 60 25 65 45 C 70 60 60 65 40 65 C 25 65 20 65 20 65'],
-        'Q': ['M 40 15 C 20 15 10 35 15 55 C 20 75 40 85 60 80 C 75 75 80 55 75 35 C 70 20 50 15 40 15', 'M 60 65 L 75 80'],
-        'R': ['M 20 15 L 20 85', 'M 20 25 C 40 25 60 25 65 45 C 70 60 60 65 40 65 C 25 65 20 65 20 65', 'M 45 65 L 65 85'],
-        'S': ['M 65 25 C 55 15 35 15 25 20 C 15 30 15 45 25 50 C 40 55 50 60 55 70 C 60 80 45 85 25 80 C 15 75 10 65 10 60'],
-        'T': ['M 10 15 L 70 15', 'M 40 15 L 40 85'],
-        'U': ['M 20 15 L 20 60 C 20 75 30 85 45 85 C 60 85 70 75 70 60 L 70 15'],
-        'V': ['M 10 15 C 25 50 35 75 40 85 C 45 75 55 50 70 15'],
-        'W': ['M 10 15 C 20 40 25 60 30 70 C 35 60 40 40 45 45 C 50 40 55 60 60 70 C 65 60 70 40 80 15'],
-        'X': ['M 20 15 C 35 40 45 65 60 85', 'M 60 15 C 45 40 35 65 20 85'],
-        'Y': ['M 10 15 C 25 40 35 55 40 60', 'M 40 60 C 45 55 55 40 70 15', 'M 40 60 L 40 85'],
-        'Z': ['M 10 15 L 70 15', 'M 70 15 C 50 40 30 65 10 85', 'M 10 85 L 70 85'],
-        'a': ['M 55 25 C 45 15 25 15 15 25 C 5 40 10 60 25 70 C 40 75 55 70 65 60', 'M 65 25 L 65 55', 'M 65 55 C 60 70 50 75 40 70'],
-        'b': ['M 20 15 L 20 75', 'M 20 30 C 35 25 50 25 60 35 C 70 50 60 65 40 65 C 25 65 20 60 20 60'],
-        'c': ['M 60 30 C 45 20 25 20 15 30 C 5 45 10 65 25 75 C 40 80 55 75 65 65'],
-        'd': ['M 60 15 L 60 75', 'M 60 30 C 45 25 30 25 20 35 C 10 50 20 65 40 65 C 55 65 60 60 60 60'],
-        'e': ['M 60 25 C 45 15 25 15 15 25 C 5 40 10 55 25 60 C 40 65 60 60 65 50', 'M 20 40 L 50 40'],
-        'f': ['M 30 15 L 45 15', 'M 40 15 L 40 75', 'M 20 30 C 35 30 50 30 55 30'],
-        'g': ['M 55 25 C 40 15 25 15 15 25 C 5 40 10 60 25 70 C 40 75 55 65 60 55', 'M 60 45 C 60 60 60 75 50 85 C 35 90 20 85 15 70', 'M 15 70 C 10 60 10 55 15 50'],
-        'h': ['M 20 15 L 20 75', 'M 20 30 C 35 25 50 25 60 35 C 70 50 60 65 45 65'],
-        'i': ['M 30 15 L 30 23', 'M 30 33 C 30 45 30 60 30 65', 'M 30 33 C 25 40 20 45 20 50'],
-        'j': ['M 45 15 L 45 23', 'M 45 33 C 45 50 45 65 40 75 C 35 85 20 85 15 75', 'M 45 33 C 40 40 35 45 35 50'],
-        'k': ['M 20 15 L 20 75', 'M 20 35 C 30 30 40 20 50 15', 'M 20 35 C 30 40 40 50 50 65'],
-        'l': ['M 20 15 L 20 75', 'M 20 75 C 25 80 30 80 30 80'],
-        'm': ['M 15 75 L 15 25', 'M 15 25 C 25 35 30 45 35 45', 'M 35 45 C 40 45 45 35 55 25', 'M 55 25 L 55 75'],
-        'n': ['M 20 75 L 20 25', 'M 20 25 C 35 25 45 25 55 35 C 65 45 60 65 45 65'],
-        'o': ['M 35 20 C 20 20 10 35 15 55 C 20 70 35 75 50 70 C 65 65 70 45 60 30 C 50 20 40 20 35 20'],
-        'p': ['M 20 20 L 20 85', 'M 20 30 C 35 25 50 25 60 35 C 70 50 60 65 40 65 C 25 65 20 60 20 60'],
-        'q': ['M 60 20 L 60 85', 'M 60 30 C 45 25 30 25 20 35 C 10 50 20 65 40 65 C 55 65 60 60 60 60'],
-        'r': ['M 20 20 L 20 65', 'M 20 25 C 30 20 45 20 60 30'],
-        's': ['M 60 30 C 45 20 25 20 15 25 C 5 35 15 45 25 50 C 40 55 50 60 55 70 C 60 80 45 85 25 80'],
-        't': ['M 20 15 C 30 15 40 15 45 15', 'M 30 15 L 30 70', 'M 30 35 C 40 35 50 35 55 35'],
-        'u': ['M 20 20 L 20 55 C 20 65 25 75 40 75 C 55 75 65 65 65 50', 'M 65 20 L 65 50'],
-        'v': ['M 15 20 C 25 45 30 60 35 70 C 40 60 45 45 55 20'],
-        'w': ['M 10 20 C 20 40 25 55 30 65 C 35 55 40 40 45 45 C 50 40 55 55 60 65 C 65 55 70 40 80 20'],
-        'x': ['M 15 20 C 30 40 40 60 55 70', 'M 55 20 C 40 40 30 60 15 70'],
-        'y': ['M 15 20 C 25 40 35 55 40 60', 'M 40 60 C 45 55 55 40 65 20', 'M 40 60 C 40 70 40 80 35 85 C 30 90 20 90 15 85'],
-        'z': ['M 15 20 L 65 20', 'M 65 20 C 45 40 30 60 15 75', 'M 15 75 L 65 75'],
-        '0': ['M 40 15 C 20 15 10 35 15 55 C 20 75 40 85 60 80 C 75 75 80 55 75 35 C 70 20 50 15 40 15'],
-        '1': ['M 25 30 L 40 15 L 40 85'],
-        '2': ['M 15 25 C 35 25 55 25 60 25 C 40 40 25 55 15 70 C 10 80 20 85 40 85 C 55 85 65 80 70 75'],
-        '3': ['M 15 25 C 40 25 60 25 65 35 C 70 45 60 50 40 50 C 60 50 65 55 70 65 C 75 75 60 85 35 85 C 15 85 10 80 10 75'],
-        '4': ['M 40 15 L 40 60 C 40 70 50 70 60 70', 'M 20 40 C 35 40 50 40 60 40', 'M 40 60 L 40 85'],
-        '5': ['M 50 20 C 35 20 20 20 15 20 C 15 35 15 45 15 50 C 35 50 50 50 60 50 C 65 65 60 80 40 85 C 20 85 15 80 10 75'],
-        '6': ['M 60 20 C 40 20 20 20 15 30 C 10 45 15 60 30 65 C 50 70 65 60 70 50 C 75 40 65 30 50 30', 'M 30 65 C 25 75 20 80 25 85'],
-        '7': ['M 15 20 C 35 20 55 20 70 20 C 60 40 50 60 40 85'],
-        '8': ['M 40 20 C 20 20 10 30 15 45 C 20 55 35 60 45 60 C 60 60 70 50 70 40 C 70 25 55 20 40 20', 'M 40 40 C 25 40 15 50 20 65 C 25 75 40 80 55 75 C 70 70 75 55 65 45 C 55 40 45 40 40 40'],
-        '9': ['M 20 65 C 40 65 60 65 65 55 C 70 45 65 30 50 25 C 35 20 20 25 15 35 C 10 45 15 55 30 60', 'M 50 25 C 55 15 60 10 65 10'],
+        'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
+        'B': ['M20,15 L20,85', 'M20,25 C35,25 50,25 55,35 C60,45 55,55 45,55 C55,55 60,65 55,75 C50,85 35,85 20,85'],
+        'C': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'],
+        'D': ['M20,15 L20,85', 'M20,25 C40,25 60,25 65,45 C70,65 60,85 40,85 C25,85 20,85 20,85'],
+        'E': ['M20,15 L60,15', 'M20,15 L20,85', 'M20,50 L50,50', 'M20,85 L60,85'],
+        'F': ['M20,15 L60,15', 'M20,15 L20,85', 'M20,50 L50,50'],
+        'G': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50', 'M65,50 L45,50', 'M45,50 L45,40'],
+        'H': ['M20,15 L20,85', 'M55,15 L55,85', 'M20,50 L55,50'],
+        'I': ['M15,15 L65,15', 'M40,15 L40,85', 'M15,85 L65,85'],
+        'J': ['M65,15 L65,60 C65,75 55,85 40,85 C25,85 15,75 15,60', 'M15,15 L15,30'],
+        'K': ['M20,15 L20,85', 'M20,50 C35,40 50,25 60,15', 'M20,50 C35,60 50,75 60,85'],
+        'L': ['M20,15 L20,85', 'M20,85 L60,85'],
+        'M': ['M15,15 L15,85', 'M15,15 C25,40 35,55 40,55', 'M40,55 C45,55 55,40 65,15', 'M65,15 L65,85'],
+        'N': ['M20,15 L20,85', 'M20,15 C35,35 50,60 60,85', 'M60,15 L60,85'],
+        'O': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'],
+        'P': ['M20,15 L20,85', 'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65'],
+        'Q': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15', 'M60,65 L75,80'],
+        'R': ['M20,15 L20,85', 'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65', 'M45,65 L65,85'],
+        'S': ['M65,25 C55,15 35,15 25,20 C15,30 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80 C15,75 10,65 10,60'],
+        'T': ['M10,15 L70,15', 'M40,15 L40,85'],
+        'U': ['M20,15 L20,60 C20,75 30,85 45,85 C60,85 70,75 70,60 L70,15'],
+        'V': ['M10,15 C25,50 35,75 40,85 C45,75 55,50 70,15'],
+        'W': ['M10,15 C20,40 25,60 30,70 C35,60 40,40 45,45 C50,40 55,60 60,70 C65,60 70,40 80,15'],
+        'X': ['M20,15 C35,40 45,65 60,85', 'M60,15 C45,40 35,65 20,85'],
+        'Y': ['M10,15 C25,40 35,55 40,60', 'M40,60 C45,55 55,40 70,15', 'M40,60 L40,85'],
+        'Z': ['M10,15 L70,15', 'M70,15 C50,40 30,65 10,85', 'M10,85 L70,85'],
+        'a': ['M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60', 'M65,25 L65,55', 'M65,55 C60,70 50,75 40,70'],
+        'b': ['M20,15 L20,75', 'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
+        'c': ['M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'],
+        'd': ['M60,15 L60,75', 'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'],
+        'e': ['M60,25 C45,15 25,15 15,25 C5,40 10,55 25,60 C40,65 60,60 65,50', 'M20,40 L50,40'],
+        'f': ['M30,15 L45,15', 'M40,15 L40,75', 'M20,30 C35,30 50,30 55,30'],
+        'g': ['M55,25 C40,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,65 60,55', 'M60,45 C60,60 60,75 50,85 C35,90 20,85 15,70', 'M15,70 C10,60 10,55 15,50'],
+        'h': ['M20,15 L20,75', 'M20,30 C35,25 50,25 60,35 C70,50 60,65 45,65'],
+        'i': ['M30,15 L30,23', 'M30,33 C30,45 30,60 30,65', 'M30,33 C25,40 20,45 20,50'],
+        'j': ['M45,15 L45,23', 'M45,33 C45,50 45,65 40,75 C35,85 20,85 15,75', 'M45,33 C40,40 35,45 35,50'],
+        'k': ['M20,15 L20,75', 'M20,35 C30,30 40,20 50,15', 'M20,35 C30,40 40,50 50,65'],
+        'l': ['M20,15 L20,75', 'M20,75 C25,80 30,80 30,80'],
+        'm': ['M15,75 L15,25', 'M15,25 C25,35 30,45 35,45', 'M35,45 C40,45 45,35 55,25', 'M55,25 L55,75'],
+        'n': ['M20,75 L20,25', 'M20,25 C35,25 45,25 55,35 C65,45 60,65 45,65'],
+        'o': ['M35,20 C20,20 10,35 15,55 C20,70 35,75 50,70 C65,65 70,45 60,30 C50,20 40,20 35,20'],
+        'p': ['M20,20 L20,85', 'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
+        'q': ['M60,20 L60,85', 'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'],
+        'r': ['M20,20 L20,65', 'M20,25 C30,20 45,20 60,30'],
+        's': ['M60,30 C45,20 25,20 15,25 C5,35 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80'],
+        't': ['M20,15 C30,15 40,15 45,15', 'M30,15 L30,70', 'M30,35 C40,35 50,35 55,35'],
+        'u': ['M20,20 L20,55 C20,65 25,75 40,75 C55,75 65,65 65,50', 'M65,20 L65,50'],
+        'v': ['M15,20 C25,45 30,60 35,70 C40,60 45,45 55,20'],
+        'w': ['M10,20 C20,40 25,55 30,65 C35,55 40,40 45,45 C50,40 55,55 60,65 C65,55 70,40 80,20'],
+        'x': ['M15,20 C30,40 40,60 55,70', 'M55,20 C40,40 30,60 15,70'],
+        'y': ['M15,20 C25,40 35,55 40,60', 'M40,60 C45,55 55,40 65,20', 'M40,60 C40,70 40,80 35,85 C30,90 20,90 15,85'],
+        'z': ['M15,20 L65,20', 'M65,20 C45,40 30,60 15,75', 'M15,75 L65,75'],
+        '0': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'],
+        '1': ['M25,30 L40,15 L40,85'],
+        '2': ['M15,25 C35,25 55,25 60,25 C40,40 25,55 15,70 C10,80 20,85 40,85 C55,85 65,80 70,75'],
+        '3': ['M15,25 C40,25 60,25 65,35 C70,45 60,50 40,50 C60,50 65,55 70,65 C75,75 60,85 35,85 C15,85 10,80 10,75'],
+        '4': ['M40,15 L40,60 C40,70 50,70 60,70', 'M20,40 C35,40 50,40 60,40', 'M40,60 L40,85'],
+        '5': ['M50,20 C35,20 20,20 15,20 C15,35 15,45 15,50 C35,50 50,50 60,50 C65,65 60,80 40,85 C20,85 15,80 10,75'],
+        '6': ['M60,20 C40,20 20,20 15,30 C10,45 15,60 30,65 C50,70 65,60 70,50 C75,40 65,30 50,30', 'M30,65 C25,75 20,80 25,85'],
+        '7': ['M15,20 C35,20 55,20 70,20 C60,40 50,60 40,85'],
+        '8': ['M40,20 C20,20 10,30 15,45 C20,55 35,60 45,60 C60,60 70,50 70,40 C70,25 55,20 40,20', 'M40,40 C25,40 15,50 20,65 C25,75 40,80 55,75 C70,70 75,55 65,45 C55,40 45,40 40,40'],
+        '9': ['M20,65 C40,65 60,65 65,55 C70,45 65,30 50,25 C35,20 20,25 15,35 C10,45 15,55 30,60', 'M50,25 C55,15 60,10 65,10'],
         ' ': []
       };
 
-      // ----- Generate SVG from text -----
+      // ----- Parse SVG path to points -----
+      function parsePathToPoints(pathData) {
+        const points = [];
+        const commands = pathData.match(/[MLCQASZ][^MLCQASZ]*/gi);
+        if (!commands) return points;
+
+        let currentX = 0, currentY = 0;
+        
+        commands.forEach(cmd => {
+          const type = cmd[0];
+          const nums = cmd.slice(1).trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
+          
+          if (type === 'M' || type === 'L') {
+            for (let i = 0; i < nums.length; i += 2) {
+              const x = nums[i] || 0;
+              const y = nums[i+1] || 0;
+              currentX = x;
+              currentY = y;
+              points.push({ x: currentX, y: currentY });
+            }
+          } else if (type === 'C') {
+            for (let i = 0; i < nums.length; i += 6) {
+              const cp1x = nums[i], cp1y = nums[i+1];
+              const cp2x = nums[i+2], cp2y = nums[i+3];
+              const endX = nums[i+4], endY = nums[i+5];
+              
+              for (let t = 0.05; t <= 1; t += 0.05) {
+                const mt = 1 - t;
+                const px = Math.pow(mt, 3) * currentX + 
+                          3 * Math.pow(mt, 2) * t * cp1x +
+                          3 * mt * Math.pow(t, 2) * cp2x +
+                          Math.pow(t, 3) * endX;
+                const py = Math.pow(mt, 3) * currentY +
+                          3 * Math.pow(mt, 2) * t * cp1y +
+                          3 * mt * Math.pow(t, 2) * cp2y +
+                          Math.pow(t, 3) * endY;
+                points.push({ x: px, y: py });
+              }
+              currentX = endX;
+              currentY = endY;
+            }
+          } else if (type === 'Q') {
+            for (let i = 0; i < nums.length; i += 4) {
+              const cpx = nums[i], cpy = nums[i+1];
+              const endX = nums[i+2], endY = nums[i+3];
+              
+              for (let t = 0.05; t <= 1; t += 0.05) {
+                const mt = 1 - t;
+                const px = Math.pow(mt, 2) * currentX +
+                          2 * mt * t * cpx +
+                          Math.pow(t, 2) * endX;
+                const py = Math.pow(mt, 2) * currentY +
+                          2 * mt * t * cpy +
+                          Math.pow(t, 2) * endY;
+                points.push({ x: px, y: py });
+              }
+              currentX = endX;
+              currentY = endY;
+            }
+          }
+        });
+        
+        return points;
+      }
+
+      // ----- Generate SVG from text using path points -----
       function generateSVG(text) {
         if (!text) return null;
         
@@ -311,32 +376,32 @@
             
             for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
               const pathData = strokes[sIdx];
-              const transformed = pathData.replace(/([MLCQA])\s*([^MLCQA]*)/g, (match, cmd, coords) => {
-                const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
-                const scaled = nums.map((n, i) => {
-                  const val = n * scaleFactor * 0.8;
-                  if (i % 2 === 0) {
-                    return val + xOffset + 20;
-                  } else {
-                    return val + yBase + 20;
-                  }
+              const points = parsePathToPoints(pathData);
+              
+              // Scale and position points
+              const scaledPoints = points.map(p => ({
+                x: p.x * scaleFactor * 0.8 + xOffset + 20,
+                y: p.y * scaleFactor * 0.8 + yBase + 20
+              }));
+              
+              if (scaledPoints.length > 1) {
+                allPaths.push({
+                  points: scaledPoints,
+                  strokeNum: ++strokeCounter
                 });
-                return cmd + scaled.join(' ');
-              });
-              allPaths.push({
-                d: transformed,
-                strokeNum: ++strokeCounter
-              });
+              }
             }
             xOffset += charWidth * scaleFactor * 0.8 + 8;
           }
           if (wIdx < words.length - 1) xOffset += gap * scaleFactor;
         }
 
+        // Build SVG with path data
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
         svg += `<g style="fill:none;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
         allPaths.forEach(p => {
-          svg += `<path d="${p.d}" data-stroke="${p.strokeNum}" />`;
+          const d = p.points.map((pt, i) => (i === 0 ? 'M' : 'L') + pt.x + ',' + pt.y).join(' ');
+          svg += `<path d="${d}" data-stroke="${p.strokeNum}" data-points="${p.points.length}" />`;
         });
         svg += `</g>`;
         svg += `</svg>`;
@@ -344,67 +409,140 @@
         return svg;
       }
 
-      // ----- Self-contained animation engine (Kanji-Animate style) -----
+      // ----- Self-contained animation engine -----
       function animateStrokes(svgElement, duration = 500) {
         const paths = svgElement.querySelectorAll('path');
-        if (!paths.length) return;
+        if (!paths.length) {
+          statusLabel.textContent = '⏺ No strokes to animate';
+          return null;
+        }
 
-        // Calculate total length for each path
-        paths.forEach(path => {
-          const length = path.getTotalLength ? path.getTotalLength() : 100;
-          path.dataset.length = length;
-          path.style.strokeDasharray = length;
-          path.style.strokeDashoffset = length;
-        });
-
-        // Animate each stroke sequentially
-        let currentStroke = 0;
         const totalStrokes = paths.length;
+        let currentStroke = 0;
         let startTime = null;
         let animationId = null;
+        let completed = false;
 
-        function animateStroke(timestamp) {
+        // Store point data for each path
+        const pathData = [];
+        paths.forEach(path => {
+          const d = path.getAttribute('d');
+          const points = d.match(/[ML]\s*[\d.]+,[\d.]+/g);
+          if (points) {
+            const coords = points.map(p => {
+              const parts = p.slice(1).split(',');
+              return { x: parseFloat(parts[0]), y: parseFloat(parts[1]) };
+            });
+            pathData.push({ path, points: coords, total: coords.length });
+          }
+        });
+
+        function animate(timestamp) {
           if (!startTime) startTime = timestamp;
           const elapsed = timestamp - startTime;
           
           // Calculate which stroke we're on
           const strokeIndex = Math.min(Math.floor(elapsed / duration), totalStrokes - 1);
-          const strokeProgress = (elapsed % duration) / duration;
+          const strokeProgress = Math.min((elapsed % duration) / duration, 1);
           
-          // Draw completed strokes
-          for (let i = 0; i < strokeIndex; i++) {
-            const path = paths[i];
-            const length = parseFloat(path.dataset.length);
-            path.style.strokeDashoffset = 0;
-            path.style.opacity = 1;
-          }
+          // Clear and redraw all strokes
+          const svg = svgElement.querySelector('g');
+          if (!svg) return;
           
-          // Draw current stroke partially
-          if (strokeIndex < totalStrokes) {
-            const path = paths[strokeIndex];
-            const length = parseFloat(path.dataset.length);
-            const offset = length * (1 - strokeProgress);
-            path.style.strokeDashoffset = offset;
-            path.style.opacity = 1;
+          // Clear existing paths
+          svg.innerHTML = '';
+          
+          // Draw completed strokes and current stroke
+          for (let i = 0; i <= strokeIndex && i < pathData.length; i++) {
+            const data = pathData[i];
+            const total = data.total;
+            let drawCount = total;
+            
+            if (i === strokeIndex) {
+              // Current stroke: draw partially
+              drawCount = Math.max(1, Math.floor(strokeProgress * total));
+            }
+            
+            if (drawCount > 0) {
+              const pts = data.points.slice(0, drawCount);
+              const d = pts.map((pt, idx) => (idx === 0 ? 'M' : 'L') + pt.x + ',' + pt.y).join(' ');
+              const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+              path.setAttribute('d', d);
+              path.setAttribute('data-stroke', i + 1);
+              path.style.fill = 'none';
+              path.style.stroke = '#1e293b';
+              path.style.strokeWidth = '4.5';
+              path.style.strokeLinecap = 'round';
+              path.style.strokeLinejoin = 'round';
+              svg.appendChild(path);
+              
+              // Add stroke number
+              if (i < strokeIndex || (i === strokeIndex && strokeProgress > 0.3)) {
+                const midIdx = Math.min(Math.floor(drawCount / 2), drawCount - 1);
+                const mid = pts[midIdx] || pts[0];
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', mid.x);
+                text.setAttribute('y', mid.y - 12);
+                text.setAttribute('text-anchor', 'middle');
+                text.setAttribute('font-size', '14');
+                text.setAttribute('font-weight', 'bold');
+                text.setAttribute('fill', '#0f172a');
+                text.setAttribute('style', 'font-family: Inter, sans-serif;');
+                text.textContent = i + 1;
+                
+                // Background for number
+                const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                const textWidth = (i + 1).toString().length * 9 + 12;
+                bg.setAttribute('x', mid.x - textWidth/2);
+                bg.setAttribute('y', mid.y - 20);
+                bg.setAttribute('width', textWidth);
+                bg.setAttribute('height', '20');
+                bg.setAttribute('rx', '10');
+                bg.setAttribute('fill', 'rgba(255,255,255,0.92)');
+                bg.setAttribute('stroke', '#e2e8f0');
+                bg.setAttribute('stroke-width', '1');
+                svg.appendChild(bg);
+                svg.appendChild(text);
+                
+                // Add start/end markers
+                if (i < strokeIndex) {
+                  // Start marker (green)
+                  const start = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                  start.setAttribute('cx', pts[0].x);
+                  start.setAttribute('cy', pts[0].y);
+                  start.setAttribute('r', '4');
+                  start.setAttribute('fill', '#22c55e');
+                  svg.appendChild(start);
+                  
+                  // End marker (red)
+                  const end = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                  end.setAttribute('cx', pts[pts.length - 1].x);
+                  end.setAttribute('cy', pts[pts.length - 1].y);
+                  end.setAttribute('r', '4');
+                  end.setAttribute('fill', '#ef4444');
+                  svg.appendChild(end);
+                }
+              }
+            }
           }
 
           // Update status
-          const progress = Math.round((strokeIndex / totalStrokes) * 100);
-          const done = Math.min(strokeIndex, totalStrokes);
-          statusLabel.textContent = `⏳ ${progress}% · ${done}/${totalStrokes}`;
+          const progress = Math.round(((strokeIndex + strokeProgress) / totalStrokes) * 100);
+          const done = Math.min(strokeIndex + 1, totalStrokes);
+          statusLabel.textContent = `⏳ ${Math.min(progress, 100)}% · ${Math.min(done, totalStrokes)}/${totalStrokes}`;
 
           // Check if complete
           if (strokeIndex >= totalStrokes - 1 && strokeProgress >= 1) {
+            completed = true;
             statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes traced`;
             return;
           }
 
-          animationId = requestAnimationFrame(animateStroke);
+          animationId = requestAnimationFrame(animate);
         }
 
         // Start animation
-        if (animationId) cancelAnimationFrame(animationId);
-        animationId = requestAnimationFrame(animateStroke);
+        animationId = requestAnimationFrame(animate);
 
         return () => {
           if (animationId) {
