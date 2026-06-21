@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter Tracer · Kanji-Animate Style</title>
+  <title>Letter Tracer · Working</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
@@ -178,7 +178,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">Kanji-Animate style · Proper SVG stroke animation</div>
+    <div class="subhead">Self-contained SVG stroke animation</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -203,9 +203,6 @@
     </div>
   </div>
 
-  <!-- Load KanjiVgAnimate library -->
-  <script src="https://cdn.jsdelivr.net/npm/kanjivganimate@0.2.1/dist/kanjivganimate.min.js"></script>
-  
   <script>
     (function() {
       'use strict';
@@ -216,266 +213,72 @@
 
       // ----- Letter stroke data (KanjiVG format with proper curves) -----
       const letterStrokes = {
-        'A': [
-          'M 25 85 L 40 15 L 55 85',
-          'M 32 55 L 48 55'
-        ],
-        'B': [
-          'M 20 15 L 20 85',
-          'M 20 25 C 35 25 50 25 55 35 C 60 45 55 55 45 55 C 55 55 60 65 55 75 C 50 85 35 85 20 85'
-        ],
-        'C': [
-          'M 65 25 C 55 15 35 15 25 20 C 15 25 10 45 15 65 C 20 80 40 85 55 80 C 65 75 70 60 70 50'
-        ],
-        'D': [
-          'M 20 15 L 20 85',
-          'M 20 25 C 40 25 60 25 65 45 C 70 65 60 85 40 85 C 25 85 20 85 20 85'
-        ],
-        'E': [
-          'M 20 15 L 60 15',
-          'M 20 15 L 20 85',
-          'M 20 50 L 50 50',
-          'M 20 85 L 60 85'
-        ],
-        'F': [
-          'M 20 15 L 60 15',
-          'M 20 15 L 20 85',
-          'M 20 50 L 50 50'
-        ],
-        'G': [
-          'M 65 25 C 55 15 35 15 25 20 C 15 25 10 45 15 65 C 20 80 40 85 55 80 C 65 75 70 60 70 50',
-          'M 65 50 L 45 50',
-          'M 45 50 L 45 40'
-        ],
-        'H': [
-          'M 20 15 L 20 85',
-          'M 55 15 L 55 85',
-          'M 20 50 L 55 50'
-        ],
-        'I': [
-          'M 15 15 L 65 15',
-          'M 40 15 L 40 85',
-          'M 15 85 L 65 85'
-        ],
-        'J': [
-          'M 65 15 L 65 60 C 65 75 55 85 40 85 C 25 85 15 75 15 60',
-          'M 15 15 L 15 30'
-        ],
-        'K': [
-          'M 20 15 L 20 85',
-          'M 20 50 C 35 40 50 25 60 15',
-          'M 20 50 C 35 60 50 75 60 85'
-        ],
-        'L': [
-          'M 20 15 L 20 85',
-          'M 20 85 L 60 85'
-        ],
-        'M': [
-          'M 15 15 L 15 85',
-          'M 15 15 C 25 40 35 55 40 55',
-          'M 40 55 C 45 55 55 40 65 15',
-          'M 65 15 L 65 85'
-        ],
-        'N': [
-          'M 20 15 L 20 85',
-          'M 20 15 C 35 35 50 60 60 85',
-          'M 60 15 L 60 85'
-        ],
-        'O': [
-          'M 40 15 C 20 15 10 35 15 55 C 20 75 40 85 60 80 C 75 75 80 55 75 35 C 70 20 50 15 40 15'
-        ],
-        'P': [
-          'M 20 15 L 20 85',
-          'M 20 25 C 40 25 60 25 65 45 C 70 60 60 65 40 65 C 25 65 20 65 20 65'
-        ],
-        'Q': [
-          'M 40 15 C 20 15 10 35 15 55 C 20 75 40 85 60 80 C 75 75 80 55 75 35 C 70 20 50 15 40 15',
-          'M 60 65 L 75 80'
-        ],
-        'R': [
-          'M 20 15 L 20 85',
-          'M 20 25 C 40 25 60 25 65 45 C 70 60 60 65 40 65 C 25 65 20 65 20 65',
-          'M 45 65 L 65 85'
-        ],
-        'S': [
-          'M 65 25 C 55 15 35 15 25 20 C 15 30 15 45 25 50 C 40 55 50 60 55 70 C 60 80 45 85 25 80 C 15 75 10 65 10 60'
-        ],
-        'T': [
-          'M 10 15 L 70 15',
-          'M 40 15 L 40 85'
-        ],
-        'U': [
-          'M 20 15 L 20 60 C 20 75 30 85 45 85 C 60 85 70 75 70 60 L 70 15'
-        ],
-        'V': [
-          'M 10 15 C 25 50 35 75 40 85 C 45 75 55 50 70 15'
-        ],
-        'W': [
-          'M 10 15 C 20 40 25 60 30 70 C 35 60 40 40 45 45 C 50 40 55 60 60 70 C 65 60 70 40 80 15'
-        ],
-        'X': [
-          'M 20 15 C 35 40 45 65 60 85',
-          'M 60 15 C 45 40 35 65 20 85'
-        ],
-        'Y': [
-          'M 10 15 C 25 40 35 55 40 60',
-          'M 40 60 C 45 55 55 40 70 15',
-          'M 40 60 L 40 85'
-        ],
-        'Z': [
-          'M 10 15 L 70 15',
-          'M 70 15 C 50 40 30 65 10 85',
-          'M 10 85 L 70 85'
-        ],
-        'a': [
-          'M 55 25 C 45 15 25 15 15 25 C 5 40 10 60 25 70 C 40 75 55 70 65 60',
-          'M 65 25 L 65 55',
-          'M 65 55 C 60 70 50 75 40 70'
-        ],
-        'b': [
-          'M 20 15 L 20 75',
-          'M 20 30 C 35 25 50 25 60 35 C 70 50 60 65 40 65 C 25 65 20 60 20 60'
-        ],
-        'c': [
-          'M 60 30 C 45 20 25 20 15 30 C 5 45 10 65 25 75 C 40 80 55 75 65 65'
-        ],
-        'd': [
-          'M 60 15 L 60 75',
-          'M 60 30 C 45 25 30 25 20 35 C 10 50 20 65 40 65 C 55 65 60 60 60 60'
-        ],
-        'e': [
-          'M 60 25 C 45 15 25 15 15 25 C 5 40 10 55 25 60 C 40 65 60 60 65 50',
-          'M 20 40 L 50 40'
-        ],
-        'f': [
-          'M 30 15 L 45 15',
-          'M 40 15 L 40 75',
-          'M 20 30 C 35 30 50 30 55 30'
-        ],
-        'g': [
-          'M 55 25 C 40 15 25 15 15 25 C 5 40 10 60 25 70 C 40 75 55 65 60 55',
-          'M 60 45 C 60 60 60 75 50 85 C 35 90 20 85 15 70',
-          'M 15 70 C 10 60 10 55 15 50'
-        ],
-        'h': [
-          'M 20 15 L 20 75',
-          'M 20 30 C 35 25 50 25 60 35 C 70 50 60 65 45 65'
-        ],
-        'i': [
-          'M 30 15 L 30 23',
-          'M 30 33 C 30 45 30 60 30 65',
-          'M 30 33 C 25 40 20 45 20 50'
-        ],
-        'j': [
-          'M 45 15 L 45 23',
-          'M 45 33 C 45 50 45 65 40 75 C 35 85 20 85 15 75',
-          'M 45 33 C 40 40 35 45 35 50'
-        ],
-        'k': [
-          'M 20 15 L 20 75',
-          'M 20 35 C 30 30 40 20 50 15',
-          'M 20 35 C 30 40 40 50 50 65'
-        ],
-        'l': [
-          'M 20 15 L 20 75',
-          'M 20 75 C 25 80 30 80 30 80'
-        ],
-        'm': [
-          'M 15 75 L 15 25',
-          'M 15 25 C 25 35 30 45 35 45',
-          'M 35 45 C 40 45 45 35 55 25',
-          'M 55 25 L 55 75'
-        ],
-        'n': [
-          'M 20 75 L 20 25',
-          'M 20 25 C 35 25 45 25 55 35 C 65 45 60 65 45 65'
-        ],
-        'o': [
-          'M 35 20 C 20 20 10 35 15 55 C 20 70 35 75 50 70 C 65 65 70 45 60 30 C 50 20 40 20 35 20'
-        ],
-        'p': [
-          'M 20 20 L 20 85',
-          'M 20 30 C 35 25 50 25 60 35 C 70 50 60 65 40 65 C 25 65 20 60 20 60'
-        ],
-        'q': [
-          'M 60 20 L 60 85',
-          'M 60 30 C 45 25 30 25 20 35 C 10 50 20 65 40 65 C 55 65 60 60 60 60'
-        ],
-        'r': [
-          'M 20 20 L 20 65',
-          'M 20 25 C 30 20 45 20 60 30'
-        ],
-        's': [
-          'M 60 30 C 45 20 25 20 15 25 C 5 35 15 45 25 50 C 40 55 50 60 55 70 C 60 80 45 85 25 80'
-        ],
-        't': [
-          'M 20 15 C 30 15 40 15 45 15',
-          'M 30 15 L 30 70',
-          'M 30 35 C 40 35 50 35 55 35'
-        ],
-        'u': [
-          'M 20 20 L 20 55 C 20 65 25 75 40 75 C 55 75 65 65 65 50',
-          'M 65 20 L 65 50'
-        ],
-        'v': [
-          'M 15 20 C 25 45 30 60 35 70 C 40 60 45 45 55 20'
-        ],
-        'w': [
-          'M 10 20 C 20 40 25 55 30 65 C 35 55 40 40 45 45 C 50 40 55 55 60 65 C 65 55 70 40 80 20'
-        ],
-        'x': [
-          'M 15 20 C 30 40 40 60 55 70',
-          'M 55 20 C 40 40 30 60 15 70'
-        ],
-        'y': [
-          'M 15 20 C 25 40 35 55 40 60',
-          'M 40 60 C 45 55 55 40 65 20',
-          'M 40 60 C 40 70 40 80 35 85 C 30 90 20 90 15 85'
-        ],
-        'z': [
-          'M 15 20 L 65 20',
-          'M 65 20 C 45 40 30 60 15 75',
-          'M 15 75 L 65 75'
-        ],
-        '0': [
-          'M 40 15 C 20 15 10 35 15 55 C 20 75 40 85 60 80 C 75 75 80 55 75 35 C 70 20 50 15 40 15'
-        ],
-        '1': [
-          'M 25 30 L 40 15 L 40 85'
-        ],
-        '2': [
-          'M 15 25 C 35 25 55 25 60 25 C 40 40 25 55 15 70 C 10 80 20 85 40 85 C 55 85 65 80 70 75'
-        ],
-        '3': [
-          'M 15 25 C 40 25 60 25 65 35 C 70 45 60 50 40 50 C 60 50 65 55 70 65 C 75 75 60 85 35 85 C 15 85 10 80 10 75'
-        ],
-        '4': [
-          'M 40 15 L 40 60 C 40 70 50 70 60 70',
-          'M 20 40 C 35 40 50 40 60 40',
-          'M 40 60 L 40 85'
-        ],
-        '5': [
-          'M 50 20 C 35 20 20 20 15 20 C 15 35 15 45 15 50 C 35 50 50 50 60 50 C 65 65 60 80 40 85 C 20 85 15 80 10 75'
-        ],
-        '6': [
-          'M 60 20 C 40 20 20 20 15 30 C 10 45 15 60 30 65 C 50 70 65 60 70 50 C 75 40 65 30 50 30',
-          'M 30 65 C 25 75 20 80 25 85'
-        ],
-        '7': [
-          'M 15 20 C 35 20 55 20 70 20 C 60 40 50 60 40 85'
-        ],
-        '8': [
-          'M 40 20 C 20 20 10 30 15 45 C 20 55 35 60 45 60 C 60 60 70 50 70 40 C 70 25 55 20 40 20',
-          'M 40 40 C 25 40 15 50 20 65 C 25 75 40 80 55 75 C 70 70 75 55 65 45 C 55 40 45 40 40 40'
-        ],
-        '9': [
-          'M 20 65 C 40 65 60 65 65 55 C 70 45 65 30 50 25 C 35 20 20 25 15 35 C 10 45 15 55 30 60',
-          'M 50 25 C 55 15 60 10 65 10'
-        ],
+        'A': ['M 25 85 L 40 15 L 55 85', 'M 32 55 L 48 55'],
+        'B': ['M 20 15 L 20 85', 'M 20 25 C 35 25 50 25 55 35 C 60 45 55 55 45 55 C 55 55 60 65 55 75 C 50 85 35 85 20 85'],
+        'C': ['M 65 25 C 55 15 35 15 25 20 C 15 25 10 45 15 65 C 20 80 40 85 55 80 C 65 75 70 60 70 50'],
+        'D': ['M 20 15 L 20 85', 'M 20 25 C 40 25 60 25 65 45 C 70 65 60 85 40 85 C 25 85 20 85 20 85'],
+        'E': ['M 20 15 L 60 15', 'M 20 15 L 20 85', 'M 20 50 L 50 50', 'M 20 85 L 60 85'],
+        'F': ['M 20 15 L 60 15', 'M 20 15 L 20 85', 'M 20 50 L 50 50'],
+        'G': ['M 65 25 C 55 15 35 15 25 20 C 15 25 10 45 15 65 C 20 80 40 85 55 80 C 65 75 70 60 70 50', 'M 65 50 L 45 50', 'M 45 50 L 45 40'],
+        'H': ['M 20 15 L 20 85', 'M 55 15 L 55 85', 'M 20 50 L 55 50'],
+        'I': ['M 15 15 L 65 15', 'M 40 15 L 40 85', 'M 15 85 L 65 85'],
+        'J': ['M 65 15 L 65 60 C 65 75 55 85 40 85 C 25 85 15 75 15 60', 'M 15 15 L 15 30'],
+        'K': ['M 20 15 L 20 85', 'M 20 50 C 35 40 50 25 60 15', 'M 20 50 C 35 60 50 75 60 85'],
+        'L': ['M 20 15 L 20 85', 'M 20 85 L 60 85'],
+        'M': ['M 15 15 L 15 85', 'M 15 15 C 25 40 35 55 40 55', 'M 40 55 C 45 55 55 40 65 15', 'M 65 15 L 65 85'],
+        'N': ['M 20 15 L 20 85', 'M 20 15 C 35 35 50 60 60 85', 'M 60 15 L 60 85'],
+        'O': ['M 40 15 C 20 15 10 35 15 55 C 20 75 40 85 60 80 C 75 75 80 55 75 35 C 70 20 50 15 40 15'],
+        'P': ['M 20 15 L 20 85', 'M 20 25 C 40 25 60 25 65 45 C 70 60 60 65 40 65 C 25 65 20 65 20 65'],
+        'Q': ['M 40 15 C 20 15 10 35 15 55 C 20 75 40 85 60 80 C 75 75 80 55 75 35 C 70 20 50 15 40 15', 'M 60 65 L 75 80'],
+        'R': ['M 20 15 L 20 85', 'M 20 25 C 40 25 60 25 65 45 C 70 60 60 65 40 65 C 25 65 20 65 20 65', 'M 45 65 L 65 85'],
+        'S': ['M 65 25 C 55 15 35 15 25 20 C 15 30 15 45 25 50 C 40 55 50 60 55 70 C 60 80 45 85 25 80 C 15 75 10 65 10 60'],
+        'T': ['M 10 15 L 70 15', 'M 40 15 L 40 85'],
+        'U': ['M 20 15 L 20 60 C 20 75 30 85 45 85 C 60 85 70 75 70 60 L 70 15'],
+        'V': ['M 10 15 C 25 50 35 75 40 85 C 45 75 55 50 70 15'],
+        'W': ['M 10 15 C 20 40 25 60 30 70 C 35 60 40 40 45 45 C 50 40 55 60 60 70 C 65 60 70 40 80 15'],
+        'X': ['M 20 15 C 35 40 45 65 60 85', 'M 60 15 C 45 40 35 65 20 85'],
+        'Y': ['M 10 15 C 25 40 35 55 40 60', 'M 40 60 C 45 55 55 40 70 15', 'M 40 60 L 40 85'],
+        'Z': ['M 10 15 L 70 15', 'M 70 15 C 50 40 30 65 10 85', 'M 10 85 L 70 85'],
+        'a': ['M 55 25 C 45 15 25 15 15 25 C 5 40 10 60 25 70 C 40 75 55 70 65 60', 'M 65 25 L 65 55', 'M 65 55 C 60 70 50 75 40 70'],
+        'b': ['M 20 15 L 20 75', 'M 20 30 C 35 25 50 25 60 35 C 70 50 60 65 40 65 C 25 65 20 60 20 60'],
+        'c': ['M 60 30 C 45 20 25 20 15 30 C 5 45 10 65 25 75 C 40 80 55 75 65 65'],
+        'd': ['M 60 15 L 60 75', 'M 60 30 C 45 25 30 25 20 35 C 10 50 20 65 40 65 C 55 65 60 60 60 60'],
+        'e': ['M 60 25 C 45 15 25 15 15 25 C 5 40 10 55 25 60 C 40 65 60 60 65 50', 'M 20 40 L 50 40'],
+        'f': ['M 30 15 L 45 15', 'M 40 15 L 40 75', 'M 20 30 C 35 30 50 30 55 30'],
+        'g': ['M 55 25 C 40 15 25 15 15 25 C 5 40 10 60 25 70 C 40 75 55 65 60 55', 'M 60 45 C 60 60 60 75 50 85 C 35 90 20 85 15 70', 'M 15 70 C 10 60 10 55 15 50'],
+        'h': ['M 20 15 L 20 75', 'M 20 30 C 35 25 50 25 60 35 C 70 50 60 65 45 65'],
+        'i': ['M 30 15 L 30 23', 'M 30 33 C 30 45 30 60 30 65', 'M 30 33 C 25 40 20 45 20 50'],
+        'j': ['M 45 15 L 45 23', 'M 45 33 C 45 50 45 65 40 75 C 35 85 20 85 15 75', 'M 45 33 C 40 40 35 45 35 50'],
+        'k': ['M 20 15 L 20 75', 'M 20 35 C 30 30 40 20 50 15', 'M 20 35 C 30 40 40 50 50 65'],
+        'l': ['M 20 15 L 20 75', 'M 20 75 C 25 80 30 80 30 80'],
+        'm': ['M 15 75 L 15 25', 'M 15 25 C 25 35 30 45 35 45', 'M 35 45 C 40 45 45 35 55 25', 'M 55 25 L 55 75'],
+        'n': ['M 20 75 L 20 25', 'M 20 25 C 35 25 45 25 55 35 C 65 45 60 65 45 65'],
+        'o': ['M 35 20 C 20 20 10 35 15 55 C 20 70 35 75 50 70 C 65 65 70 45 60 30 C 50 20 40 20 35 20'],
+        'p': ['M 20 20 L 20 85', 'M 20 30 C 35 25 50 25 60 35 C 70 50 60 65 40 65 C 25 65 20 60 20 60'],
+        'q': ['M 60 20 L 60 85', 'M 60 30 C 45 25 30 25 20 35 C 10 50 20 65 40 65 C 55 65 60 60 60 60'],
+        'r': ['M 20 20 L 20 65', 'M 20 25 C 30 20 45 20 60 30'],
+        's': ['M 60 30 C 45 20 25 20 15 25 C 5 35 15 45 25 50 C 40 55 50 60 55 70 C 60 80 45 85 25 80'],
+        't': ['M 20 15 C 30 15 40 15 45 15', 'M 30 15 L 30 70', 'M 30 35 C 40 35 50 35 55 35'],
+        'u': ['M 20 20 L 20 55 C 20 65 25 75 40 75 C 55 75 65 65 65 50', 'M 65 20 L 65 50'],
+        'v': ['M 15 20 C 25 45 30 60 35 70 C 40 60 45 45 55 20'],
+        'w': ['M 10 20 C 20 40 25 55 30 65 C 35 55 40 40 45 45 C 50 40 55 55 60 65 C 65 55 70 40 80 20'],
+        'x': ['M 15 20 C 30 40 40 60 55 70', 'M 55 20 C 40 40 30 60 15 70'],
+        'y': ['M 15 20 C 25 40 35 55 40 60', 'M 40 60 C 45 55 55 40 65 20', 'M 40 60 C 40 70 40 80 35 85 C 30 90 20 90 15 85'],
+        'z': ['M 15 20 L 65 20', 'M 65 20 C 45 40 30 60 15 75', 'M 15 75 L 65 75'],
+        '0': ['M 40 15 C 20 15 10 35 15 55 C 20 75 40 85 60 80 C 75 75 80 55 75 35 C 70 20 50 15 40 15'],
+        '1': ['M 25 30 L 40 15 L 40 85'],
+        '2': ['M 15 25 C 35 25 55 25 60 25 C 40 40 25 55 15 70 C 10 80 20 85 40 85 C 55 85 65 80 70 75'],
+        '3': ['M 15 25 C 40 25 60 25 65 35 C 70 45 60 50 40 50 C 60 50 65 55 70 65 C 75 75 60 85 35 85 C 15 85 10 80 10 75'],
+        '4': ['M 40 15 L 40 60 C 40 70 50 70 60 70', 'M 20 40 C 35 40 50 40 60 40', 'M 40 60 L 40 85'],
+        '5': ['M 50 20 C 35 20 20 20 15 20 C 15 35 15 45 15 50 C 35 50 50 50 60 50 C 65 65 60 80 40 85 C 20 85 15 80 10 75'],
+        '6': ['M 60 20 C 40 20 20 20 15 30 C 10 45 15 60 30 65 C 50 70 65 60 70 50 C 75 40 65 30 50 30', 'M 30 65 C 25 75 20 80 25 85'],
+        '7': ['M 15 20 C 35 20 55 20 70 20 C 60 40 50 60 40 85'],
+        '8': ['M 40 20 C 20 20 10 30 15 45 C 20 55 35 60 45 60 C 60 60 70 50 70 40 C 70 25 55 20 40 20', 'M 40 40 C 25 40 15 50 20 65 C 25 75 40 80 55 75 C 70 70 75 55 65 45 C 55 40 45 40 40 40'],
+        '9': ['M 20 65 C 40 65 60 65 65 55 C 70 45 65 30 50 25 C 35 20 20 25 15 35 C 10 45 15 55 30 60', 'M 50 25 C 55 15 60 10 65 10'],
         ' ': []
       };
 
-      // ----- Generate SVG from text (Kanji-Animate style) -----
+      // ----- Generate SVG from text -----
       function generateSVG(text) {
         if (!text) return null;
         
@@ -487,7 +290,6 @@
         const svgWidth = 800;
         const svgHeight = 400;
 
-        // Calculate scaling
         let totalWidth = 0;
         for (let w of words) {
           totalWidth += w.length * charWidth + (w.length - 1) * 6;
@@ -509,7 +311,6 @@
             
             for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
               const pathData = strokes[sIdx];
-              // Transform the path with translation and scaling
               const transformed = pathData.replace(/([MLCQA])\s*([^MLCQA]*)/g, (match, cmd, coords) => {
                 const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
                 const scaled = nums.map((n, i) => {
@@ -532,8 +333,7 @@
           if (wIdx < words.length - 1) xOffset += gap * scaleFactor;
         }
 
-        // Build SVG with Kanji-Animate structure
-        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}" class="kanjiVG">`;
+        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
         svg += `<g style="fill:none;stroke-width:4.5;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
         allPaths.forEach(p => {
           svg += `<path d="${p.d}" data-stroke="${p.strokeNum}" />`;
@@ -544,21 +344,87 @@
         return svg;
       }
 
+      // ----- Self-contained animation engine (Kanji-Animate style) -----
+      function animateStrokes(svgElement, duration = 500) {
+        const paths = svgElement.querySelectorAll('path');
+        if (!paths.length) return;
+
+        // Calculate total length for each path
+        paths.forEach(path => {
+          const length = path.getTotalLength ? path.getTotalLength() : 100;
+          path.dataset.length = length;
+          path.style.strokeDasharray = length;
+          path.style.strokeDashoffset = length;
+        });
+
+        // Animate each stroke sequentially
+        let currentStroke = 0;
+        const totalStrokes = paths.length;
+        let startTime = null;
+        let animationId = null;
+
+        function animateStroke(timestamp) {
+          if (!startTime) startTime = timestamp;
+          const elapsed = timestamp - startTime;
+          
+          // Calculate which stroke we're on
+          const strokeIndex = Math.min(Math.floor(elapsed / duration), totalStrokes - 1);
+          const strokeProgress = (elapsed % duration) / duration;
+          
+          // Draw completed strokes
+          for (let i = 0; i < strokeIndex; i++) {
+            const path = paths[i];
+            const length = parseFloat(path.dataset.length);
+            path.style.strokeDashoffset = 0;
+            path.style.opacity = 1;
+          }
+          
+          // Draw current stroke partially
+          if (strokeIndex < totalStrokes) {
+            const path = paths[strokeIndex];
+            const length = parseFloat(path.dataset.length);
+            const offset = length * (1 - strokeProgress);
+            path.style.strokeDashoffset = offset;
+            path.style.opacity = 1;
+          }
+
+          // Update status
+          const progress = Math.round((strokeIndex / totalStrokes) * 100);
+          const done = Math.min(strokeIndex, totalStrokes);
+          statusLabel.textContent = `⏳ ${progress}% · ${done}/${totalStrokes}`;
+
+          // Check if complete
+          if (strokeIndex >= totalStrokes - 1 && strokeProgress >= 1) {
+            statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes traced`;
+            return;
+          }
+
+          animationId = requestAnimationFrame(animateStroke);
+        }
+
+        // Start animation
+        if (animationId) cancelAnimationFrame(animationId);
+        animationId = requestAnimationFrame(animateStroke);
+
+        return () => {
+          if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+          }
+        };
+      }
+
       // ----- Render and animate -----
-      let animator = null;
+      let cancelAnimation = null;
       let isAnimating = false;
-      let animationCheckInterval = null;
 
       function renderAndAnimate(text) {
         // Clean up previous
-        if (animationCheckInterval) {
-          clearInterval(animationCheckInterval);
-          animationCheckInterval = null;
+        if (cancelAnimation) {
+          cancelAnimation();
+          cancelAnimation = null;
         }
         container.innerHTML = '';
-        if (animator) {
-          animator = null;
-        }
         isAnimating = false;
 
         const svgString = generateSVG(text);
@@ -568,9 +434,7 @@
           return;
         }
 
-        // Insert SVG
         container.innerHTML = svgString;
-        
         const svgElement = container.querySelector('svg');
         if (!svgElement) {
           statusLabel.textContent = '❌ Error generating SVG';
@@ -581,56 +445,10 @@
         svgElement.style.height = '100%';
         svgElement.style.display = 'block';
 
-        // Initialize KanjiVgAnimate
-        try {
-          animator = new KanjivgAnimate('.kanjiVG', 500);
-          isAnimating = true;
-          statusLabel.textContent = '▶ Animating...';
-          
-          // Monitor completion
-          let checkCount = 0;
-          animationCheckInterval = setInterval(() => {
-            checkCount++;
-            if (!isAnimating) {
-              clearInterval(animationCheckInterval);
-              animationCheckInterval = null;
-              return;
-            }
-            
-            const paths = svgElement.querySelectorAll('path');
-            let allComplete = true;
-            let completed = 0;
-            paths.forEach(p => {
-              const offset = p.style.strokeDashoffset;
-              if (offset && parseFloat(offset) <= 1) {
-                completed++;
-              } else {
-                allComplete = false;
-              }
-            });
-            
-            if (allComplete && paths.length > 0) {
-              isAnimating = false;
-              statusLabel.textContent = `✅ Complete · ${paths.length} strokes traced`;
-              clearInterval(animationCheckInterval);
-              animationCheckInterval = null;
-            } else if (checkCount > 300) {
-              // Timeout fallback
-              isAnimating = false;
-              statusLabel.textContent = `✅ Animation complete (${completed}/${paths.length})`;
-              clearInterval(animationCheckInterval);
-              animationCheckInterval = null;
-            } else if (checkCount % 10 === 0) {
-              const progress = Math.round((completed / paths.length) * 100);
-              statusLabel.textContent = `⏳ ${progress}% · ${completed}/${paths.length}`;
-            }
-          }, 100);
-          
-        } catch (e) {
-          console.warn('KanjiVgAnimate error:', e);
-          statusLabel.textContent = '⚠️ Error loading animation library';
-          // Show the SVG anyway
-        }
+        // Start animation
+        isAnimating = true;
+        statusLabel.textContent = '▶ Animating...';
+        cancelAnimation = animateStrokes(svgElement, 500);
       }
 
       // ----- Public functions -----
@@ -640,14 +458,11 @@
       }
 
       function clearTrace() {
-        if (animationCheckInterval) {
-          clearInterval(animationCheckInterval);
-          animationCheckInterval = null;
+        if (cancelAnimation) {
+          cancelAnimation();
+          cancelAnimation = null;
         }
         container.innerHTML = '';
-        if (animator) {
-          animator = null;
-        }
         isAnimating = false;
         statusLabel.textContent = '⏺ Cleared';
         container.innerHTML = '<div style="color:#94a3b8;padding:2rem;text-align:center;">Enter text and click Trace</div>';
