@@ -183,7 +183,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">KanjiVgAnimate library · Full alphabet</div>
+    <div class="subhead">KanjiVgAnimate library · Exact replica</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -291,7 +291,7 @@
         ' ': []
       };
 
-      // ----- Generate SVG with proper KanjiVgAnimate structure -----
+      // ----- Generate SVG with KanjiVgAnimate structure -----
       function generateSVG(text) {
         if (!text) return null;
         
@@ -353,6 +353,7 @@
             for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
               const pathData = strokes[sIdx];
               
+              // Transform path with scaling and positioning
               const transformed = pathData.replace(/([MLCQA])([^MLCQA]*)/g, (match, cmd, coords) => {
                 const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
                 const scaled = nums.map((n, i) => {
@@ -391,6 +392,7 @@
 
       // ----- Render using KanjiVgAnimate library -----
       let currentAnimator = null;
+      let animating = false;
 
       function renderAndAnimate(text) {
         // Clear previous
@@ -398,6 +400,7 @@
         if (currentAnimator) {
           currentAnimator = null;
         }
+        animating = false;
 
         const svgString = generateSVG(text);
         if (!svgString) {
@@ -422,12 +425,18 @@
         // Initialize KanjiVgAnimate - uses data-stroke attributes for numbering
         try {
           currentAnimator = new KanjivgAnimate('.kanjiVG', 500);
+          animating = true;
           statusLabel.textContent = '▶ Animating...';
           
           // Monitor completion
           let checkCount = 0;
           const checkInterval = setInterval(() => {
             checkCount++;
+            
+            if (!animating) {
+              clearInterval(checkInterval);
+              return;
+            }
             
             const paths = svgElement.querySelectorAll('path');
             let allComplete = true;
@@ -442,9 +451,11 @@
             });
             
             if (allComplete && paths.length > 0) {
+              animating = false;
               statusLabel.textContent = `✅ Complete · ${paths.length} strokes`;
               clearInterval(checkInterval);
             } else if (checkCount > 300) {
+              animating = false;
               statusLabel.textContent = `✅ Complete (${completed}/${paths.length})`;
               clearInterval(checkInterval);
             } else if (checkCount % 10 === 0 && paths.length > 0) {
@@ -456,12 +467,11 @@
         } catch (e) {
           console.warn('KanjiVgAnimate error:', e);
           statusLabel.textContent = '⚠️ Using fallback';
-          // Fallback: manually animate with CSS
           fallbackAnimate(svgElement);
         }
       }
 
-      // ----- Fallback CSS animation (if library fails) -----
+      // ----- Fallback CSS animation (exact replica of library behavior) -----
       function fallbackAnimate(svgElement) {
         const paths = svgElement.querySelectorAll('path');
         const totalStrokes = paths.length;
@@ -474,33 +484,31 @@
             
             path.style.strokeDasharray = length;
             path.style.strokeDashoffset = length;
-            path.style.animation = `trace-stroke 500ms ease forwards ${delay}ms`;
+            path.style.transition = `stroke-dashoffset 500ms ease ${delay}ms`;
             
-            path.addEventListener('animationend', () => {
+            // Use requestAnimationFrame to apply the transition
+            requestAnimationFrame(() => {
+              path.style.strokeDashoffset = 0;
+            });
+            
+            // Track completion
+            const onFinish = () => {
               completed++;
               const progress = Math.round((completed / totalStrokes) * 100);
               statusLabel.textContent = `⏳ ${progress}% · ${completed}/${totalStrokes}`;
               if (completed === totalStrokes) {
                 statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes`;
               }
-            });
+            };
+            
+            // Use setTimeout as a simple completion tracker
+            setTimeout(onFinish, delay + 500 + 50);
+            
           } catch(e) {
             // Skip if path can't be measured
+            completed++;
           }
         });
-
-        // Inject keyframes if not already present
-        if (!document.getElementById('fallback-keyframes')) {
-          const style = document.createElement('style');
-          style.id = 'fallback-keyframes';
-          style.textContent = `
-            @keyframes trace-stroke {
-              from { stroke-dashoffset: var(--length, 100); }
-              to { stroke-dashoffset: 0; }
-            }
-          `;
-          document.head.appendChild(style);
-        }
         
         statusLabel.textContent = '▶ Animating (fallback)...';
       }
@@ -516,6 +524,7 @@
         if (currentAnimator) {
           currentAnimator = null;
         }
+        animating = false;
         statusLabel.textContent = '⏺ Cleared';
         container.innerHTML = '<div style="color:#94a3b8;padding:2rem;text-align:center;">Enter text and click Trace</div>';
       }
