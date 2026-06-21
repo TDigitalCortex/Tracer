@@ -50,6 +50,7 @@
       margin-bottom: 1.5rem;
       min-height: 400px;
       position: relative;
+      overflow: hidden;
     }
     #svgContainer {
       width: 100%;
@@ -59,7 +60,7 @@
       align-items: center;
       background: #ffffff;
       border-radius: 16px;
-      overflow: hidden;
+      overflow: auto;
       position: relative;
     }
     #svgContainer svg {
@@ -213,6 +214,8 @@
       const inputField = document.getElementById('wordInput');
 
       // ----- Correct letter stroke data (KanjiVG format) -----
+      // G: 1 stroke (main curve) - no extra horizontal/vertical
+      // J: 1 stroke (main curve) - no extra top horizontal
       const letterStrokes = {
         'A': [
           'M25,85 L40,15 L55,85',
@@ -241,9 +244,7 @@
           'M20,50 L50,50'
         ],
         'G': [
-          'M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50',
-          'M65,50 L45,50',
-          'M45,50 L45,40'
+          'M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'
         ],
         'H': [
           'M20,15 L20,85',
@@ -256,8 +257,7 @@
           'M15,85 L65,85'
         ],
         'J': [
-          'M65,15 L65,60 C65,75 55,85 40,85 C25,85 15,75 15,60',
-          'M15,15 L15,30'
+          'M65,15 L65,60 C65,75 55,85 40,85 C25,85 15,75 15,60'
         ],
         'K': [
           'M20,15 L20,85',
@@ -473,58 +473,104 @@
         ' ': []
       };
 
-      // ----- Generate SVG with proper stroke paths -----
+      // ----- Generate SVG with proper stroke paths and wrap logic -----
       function generateSVG(text) {
         if (!text) return null;
         
         const words = text.split(' ');
-        let xOffset = 20;
-        const yBase = 55;
-        const charWidth = 50;
-        const gap = 30;
         const svgWidth = 800;
         const svgHeight = 400;
+        const charWidth = 50;
+        const gap = 30;
         const scaleFactor = 1.0;
+        const maxWidth = svgWidth - 40;
 
         let allPaths = [];
         let strokeCounter = 0;
+        let xOffset = 20;
+        let yBase = 55;
+        let currentLine = 0;
+        let lineHeight = 90;
 
-        for (let wIdx = 0; wIdx < words.length; wIdx++) {
-          const word = words[wIdx];
-          
-          for (let chIdx = 0; chIdx < word.length; chIdx++) {
-            const ch = word[chIdx];
-            const strokes = letterStrokes[ch] || letterStrokes['A'];
-            
-            for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
-              const pathData = strokes[sIdx];
-              
-              // Transform the path with translation and scaling
-              const transformed = pathData.replace(/([MLCQA])([^MLCQA]*)/g, (match, cmd, coords) => {
-                const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
-                const scaled = nums.map((n, i) => {
-                  const val = n * scaleFactor * 0.9;
-                  if (i % 2 === 0) {
-                    return val + xOffset + 15;
-                  } else {
-                    return val + yBase + 20;
-                  }
-                });
-                return cmd + scaled.join(' ');
-              });
-              
-              allPaths.push({
-                d: transformed,
-                strokeNum: ++strokeCounter
-              });
-            }
-            xOffset += charWidth * scaleFactor * 0.9 + 6;
+        // Calculate total width needed for each word
+        let wordWidths = words.map(word => {
+          let width = 0;
+          for (let ch of word) {
+            width += charWidth * scaleFactor * 0.9 + 6;
           }
-          if (wIdx < words.length - 1) xOffset += gap * scaleFactor;
+          return width;
+        });
+
+        // Layout words with wrapping
+        let lines = [];
+        let currentLineWords = [];
+        let currentLineWidth = 0;
+
+        for (let i = 0; i < words.length; i++) {
+          const word = words[i];
+          const wordWidth = wordWidths[i];
+          
+          if (currentLineWidth + wordWidth + (currentLineWords.length > 0 ? gap : 0) > maxWidth) {
+            // Start new line
+            if (currentLineWords.length > 0) {
+              lines.push(currentLineWords);
+            }
+            currentLineWords = [word];
+            currentLineWidth = wordWidth;
+          } else {
+            currentLineWords.push(word);
+            currentLineWidth += wordWidth + (currentLineWords.length > 1 ? gap : 0);
+          }
+        }
+        if (currentLineWords.length > 0) {
+          lines.push(currentLineWords);
         }
 
-        // Build SVG with proper structure
-        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${svgHeight}" viewBox="0 0 ${svgWidth} ${svgHeight}">`;
+        // Generate paths for each line
+        for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+          const lineWords = lines[lineIdx];
+          xOffset = 20;
+          
+          for (let wIdx = 0; wIdx < lineWords.length; wIdx++) {
+            const word = lineWords[wIdx];
+            
+            for (let chIdx = 0; chIdx < word.length; chIdx++) {
+              const ch = word[chIdx];
+              const strokes = letterStrokes[ch] || letterStrokes['A'];
+              
+              for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
+                const pathData = strokes[sIdx];
+                
+                // Transform the path with translation and scaling
+                const transformed = pathData.replace(/([MLCQA])([^MLCQA]*)/g, (match, cmd, coords) => {
+                  const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
+                  const scaled = nums.map((n, i) => {
+                    const val = n * scaleFactor * 0.9;
+                    if (i % 2 === 0) {
+                      return val + xOffset + 15;
+                    } else {
+                      return val + yBase + (lineIdx * lineHeight) + 20;
+                    }
+                  });
+                  return cmd + scaled.join(' ');
+                });
+                
+                allPaths.push({
+                  d: transformed,
+                  strokeNum: ++strokeCounter
+                });
+              }
+              xOffset += charWidth * scaleFactor * 0.9 + 6;
+            }
+            if (wIdx < lineWords.length - 1) xOffset += gap * scaleFactor;
+          }
+        }
+
+        // Calculate final SVG height based on number of lines
+        const finalHeight = Math.max(svgHeight, (lines.length * lineHeight) + 100);
+
+        // Build SVG
+        let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
         allPaths.forEach(p => {
           svg += `<path d="${p.d}" data-stroke="${p.strokeNum}" />`;
@@ -535,7 +581,7 @@
         return svg;
       }
 
-      // ----- Proper SVG stroke animation (Kanji-Animate style) -----
+      // ----- SVG stroke animation (Kanji-Animate style) -----
       function animateStrokes(svgElement, duration = 500) {
         const paths = svgElement.querySelectorAll('path');
         if (!paths.length) {
@@ -549,45 +595,44 @@
 
         // Calculate lengths and set up each path
         paths.forEach((path) => {
-          const length = path.getTotalLength ? path.getTotalLength() : 100;
-          path.style.strokeDasharray = length;
-          path.style.strokeDashoffset = length;
-          path.dataset.length = length;
+          try {
+            const length = path.getTotalLength ? path.getTotalLength() : 100;
+            path.style.strokeDasharray = length;
+            path.style.strokeDashoffset = length;
+            path.dataset.length = length;
+          } catch(e) {
+            path.style.strokeDasharray = 100;
+            path.style.strokeDashoffset = 100;
+            path.dataset.length = 100;
+          }
         });
 
         function animate(timestamp) {
           if (!startTime) startTime = timestamp;
           const elapsed = timestamp - startTime;
           
-          // Calculate which stroke and progress
           const strokeIndex = Math.min(Math.floor(elapsed / duration), totalStrokes - 1);
           const strokeProgress = Math.min((elapsed % duration) / duration, 1);
           
-          // Update each path
           paths.forEach((path, index) => {
-            const length = parseFloat(path.dataset.length);
+            const length = parseFloat(path.dataset.length) || 100;
             if (index < strokeIndex) {
-              // Completed stroke
               path.style.strokeDashoffset = 0;
               path.style.opacity = 1;
             } else if (index === strokeIndex) {
-              // Current stroke - partially drawn
               const offset = length * (1 - strokeProgress);
               path.style.strokeDashoffset = offset;
               path.style.opacity = 1;
             } else {
-              // Not yet drawn - hidden
               path.style.strokeDashoffset = length;
               path.style.opacity = 0.1;
             }
           });
 
-          // Update status
           const percent = Math.round(((strokeIndex + strokeProgress) / totalStrokes) * 100);
           const done = Math.min(strokeIndex + 1, totalStrokes);
           statusLabel.textContent = `⏳ ${Math.min(percent, 100)}% · ${done}/${totalStrokes}`;
 
-          // Check completion
           if (strokeIndex >= totalStrokes - 1 && strokeProgress >= 1) {
             statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes`;
             return;
