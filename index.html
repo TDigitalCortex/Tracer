@@ -183,7 +183,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">Kanji-Animate style · Consistent spacing</div>
+    <div class="subhead">Kanji-Animate style · Fixed B, D, R</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -216,12 +216,18 @@
       const statusLabel = document.getElementById('statusLabel');
       const inputField = document.getElementById('wordInput');
 
-      // ----- Letter stroke data (KanjiVG format) -----
+      // ----- Letter stroke data with fixed B, D, R -----
       const letterStrokes = {
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
-        'B': ['M20,15 L20,85', 'M20,25 C35,25 50,25 55,35 C60,45 55,55 45,55 C55,55 60,65 55,75 C50,85 35,85 20,85'],
+        'B': [
+          'M20,15 L20,85',
+          'M20,25 C40,25 55,25 60,35 C65,45 60,55 50,55 C60,55 65,65 60,75 C55,85 40,85 20,85'
+        ],
         'C': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'],
-        'D': ['M20,15 L20,85', 'M20,25 C40,25 60,25 65,45 C70,65 60,85 40,85 C25,85 20,85 20,85'],
+        'D': [
+          'M20,15 L20,85',
+          'M20,25 C45,25 65,25 70,50 C75,75 65,85 45,85 C25,85 20,85 20,85'
+        ],
         'E': ['M20,15 L60,15', 'M20,15 L20,85', 'M20,50 L50,50', 'M20,85 L60,85'],
         'F': ['M20,15 L60,15', 'M20,15 L20,85', 'M20,50 L50,50'],
         'G': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50', 'M70,50 L45,50'],
@@ -235,7 +241,11 @@
         'O': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'],
         'P': ['M20,15 L20,85', 'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65'],
         'Q': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15', 'M60,65 L75,80'],
-        'R': ['M20,15 L20,85', 'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65', 'M45,65 L65,85'],
+        'R': [
+          'M20,15 L20,85',
+          'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65',
+          'M45,60 L65,85'
+        ],
         'S': ['M65,25 C55,15 35,15 25,20 C15,30 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80 C15,75 10,65 10,60'],
         'T': ['M10,15 L70,15', 'M40,15 L40,85'],
         'U': ['M20,15 L20,60 C20,75 30,85 45,85 C60,85 70,75 70,60 L70,15'],
@@ -283,7 +293,7 @@
         ' ': []
       };
 
-      // ----- Generate SVG with consistent spacing for ALL characters -----
+      // ----- Generate SVG with consistent spacing -----
       function generateSVG(text) {
         if (!text) return null;
         
@@ -295,9 +305,9 @@
         const lineHeight = 90;
         const yBase = 55;
         
-        // Fixed character width and spacing - applied to ALL characters equally
+        // Fixed character width and spacing
         const charWidth = 50;
-        const charSpacing = 14; // Consistent spacing between ALL characters
+        const charSpacing = 14;
         const totalCharWidth = charWidth + charSpacing;
 
         // Split into characters
@@ -314,7 +324,6 @@
         for (let i = 0; i < chars.length; i++) {
           const charData = chars[i];
           
-          // Add spacing between characters on same line
           const spacing = currentLine.length > 0 ? charSpacing : 0;
           const testWidth = currentWidth + charWidth + spacing;
           
@@ -339,7 +348,6 @@
 
         for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
           const lineData = lines[lineIdx];
-          // Center the line within the available space
           const totalLineWidth = lineData.length * charWidth + (lineData.length - 1) * charSpacing;
           const xOffset = padding + (maxWidth - totalLineWidth) / 2;
           const yOffset = yBase + (lineIdx * lineHeight);
@@ -349,7 +357,6 @@
             const ch = charData.char;
             const strokes = letterStrokes[ch] || letterStrokes['A'];
             
-            // Every character gets the SAME position calculation
             const charX = xOffset + charIdx * (charWidth + charSpacing);
             
             for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
@@ -376,10 +383,8 @@
           }
         }
 
-        // Calculate final height
         const finalHeight = Math.max(400, lines.length * lineHeight + 100 + padding);
 
-        // Build SVG
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
         svg += `<rect width="100%" height="100%" fill="white" rx="8" />`;
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
@@ -392,7 +397,7 @@
         return svg;
       }
 
-      // ----- SVG stroke animation with fixed completion -----
+      // ----- SVG stroke animation -----
       function animateStrokes(svgElement, duration = 500) {
         const paths = svgElement.querySelectorAll('path');
         if (!paths.length) {
@@ -405,7 +410,6 @@
         let animationId = null;
         let isComplete = false;
 
-        // Set up each path
         paths.forEach((path) => {
           try {
             const length = path.getTotalLength ? path.getTotalLength() : 100;
@@ -427,14 +431,12 @@
           if (!startTime) startTime = timestamp;
           const elapsed = timestamp - startTime;
           
-          // Calculate which stroke we're on
           const totalTime = totalStrokes * duration;
           const progress = Math.min(elapsed / totalTime, 1);
           
           const strokeIndex = Math.min(Math.floor(progress * totalStrokes), totalStrokes - 1);
           const strokeProgress = Math.min((progress * totalStrokes) - strokeIndex, 1);
           
-          // Update paths
           paths.forEach((path, index) => {
             const length = parseFloat(path.dataset.length) || 100;
             if (index < strokeIndex) {
@@ -454,7 +456,6 @@
           const done = Math.min(strokeIndex + 1, totalStrokes);
           statusLabel.textContent = `⏳ ${Math.min(percent, 100)}% · ${done}/${totalStrokes}`;
 
-          // Check completion
           if (progress >= 1) {
             isComplete = true;
             statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes`;
@@ -545,7 +546,6 @@
         }
       });
 
-      // ----- Handle resize -----
       let resizeTimeout;
       function handleResize() {
         clearTimeout(resizeTimeout);
@@ -557,7 +557,6 @@
 
       window.addEventListener('resize', handleResize);
 
-      // ----- Initial load -----
       window.addEventListener('load', () => {
         inputField.value = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         setTimeout(startTrace, 100);
