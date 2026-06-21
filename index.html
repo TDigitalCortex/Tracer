@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter Tracer · KanjiVgAnimate Replica</title>
+  <title>Letter Tracer · KanjiVgAnimate Exact</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
@@ -170,7 +170,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">KanjiVgAnimate replica · Full A-Z, a-z, 0-9</div>
+    <div class="subhead">KanjiVgAnimate exact logic · Full A-Z, a-z, 0-9</div>
     <div class="canvas-wrapper">
       <canvas id="tracerCanvas" width="800" height="400"></canvas>
     </div>
@@ -198,20 +198,21 @@
   <script>
     (function() {
       // ============================================================
-      // KANJIVGANIMATE CORE LOGIC - EXACT REPLICA
+      // KANJIVGANIMATE EXACT LOGIC - TIME-BASED ANIMATION
       // ============================================================
       
       const canvas = document.getElementById('tracerCanvas');
       const ctx = canvas.getContext('2d');
       const W = canvas.width, H = canvas.height;
 
-      // ----- Animation state (matches kanjivganimate) -----
-      let strokes = [];
-      let currentStroke = 0;
-      let currentPoint = 0;
-      let isAnimating = false;
+      // ----- State (matches kanjivganimate) -----
+      let strokeData = [];
+      let animating = false;
       let animationId = null;
-      const ANIMATION_SPEED = 1.5; // points per frame
+      let startTime = 0;
+      let elapsedTime = 0;
+      const DEFAULT_DURATION = 500; // ms per stroke (matches kanjivganimate default)
+      let totalDuration = 0;
 
       // ----- SVG Path parser (exact from kanjivganimate) -----
       function parseSVGPath(pathData) {
@@ -240,7 +241,6 @@
               points.push({ x: currentX, y: currentY });
             }
           } else if (type === 'C' || type === 'c') {
-            // Cubic bezier with high precision (20 segments)
             for (let i = 0; i < nums.length; i += 6) {
               const cp1x = nums[i], cp1y = nums[i+1];
               const cp2x = nums[i+2], cp2y = nums[i+3];
@@ -248,7 +248,7 @@
               const endX = type === 'c' ? currentX + x : x;
               const endY = type === 'c' ? currentY + y : y;
               
-              // 20 segments for smooth curves
+              // 20 segments for smooth curves (matching kanjivganimate precision)
               for (let t = 0.05; t <= 1; t += 0.05) {
                 const mt = 1 - t;
                 const px = Math.pow(mt, 3) * currentX + 
@@ -265,7 +265,6 @@
               currentY = endY;
             }
           } else if (type === 'Q' || type === 'q') {
-            // Quadratic bezier
             for (let i = 0; i < nums.length; i += 4) {
               const cpx = nums[i], cpy = nums[i+1];
               const x = nums[i+2], y = nums[i+3];
@@ -286,14 +285,12 @@
               currentY = endY;
             }
           } else if (type === 'A' || type === 'a') {
-            // Arc - approximate with bezier
             for (let i = 0; i < nums.length; i += 7) {
               const rx = nums[i], ry = nums[i+1];
               const x = nums[i+5], y = nums[i+6];
               const endX = type === 'a' ? currentX + x : x;
               const endY = type === 'a' ? currentY + y : y;
               
-              // Arc approximation
               const dx = endX - currentX;
               const dy = endY - currentY;
               const dist = Math.sqrt(dx*dx + dy*dy);
@@ -328,7 +325,7 @@
         return points;
       }
 
-      // ----- Complete A-Z, a-z, 0-9 SVG paths (KanjiVG style) -----
+      // ----- Complete A-Z, a-z, 0-9 SVG paths -----
       const letterSVG = {
         // UPPERCASE A-Z
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
@@ -400,7 +397,7 @@
         ' ': []
       };
 
-      // ----- Generate strokes (KanjiVgAnimate style) -----
+      // ----- Generate strokes (matches kanjivganimate structure) -----
       function generateStrokes(text) {
         if (!text) return [];
         const result = [];
@@ -442,7 +439,8 @@
                 result.push({
                   points: scaled,
                   strokeNum: ++strokeCounter,
-                  completed: false
+                  totalPoints: scaled.length,
+                  currentPoint: 0
                 });
               }
             }
@@ -453,7 +451,7 @@
         return result;
       }
 
-      // ----- Drawing (KanjiVgAnimate style) -----
+      // ----- Drawing (matches kanjivganimate) -----
       function drawStroke(stroke, progress = 1, showNumber = true) {
         if (!stroke || stroke.points.length < 2) return;
         const pts = stroke.points;
@@ -550,7 +548,7 @@
         }
       }
 
-      // ----- Main draw (KanjiVgAnimate style) -----
+      // ----- Main draw (matches kanjivganimate) -----
       function drawAll(progress = 1) {
         ctx.clearRect(0, 0, W, H);
 
@@ -572,13 +570,13 @@
         }
         ctx.restore();
 
-        if (!strokes.length) return;
+        if (!strokeData.length) return;
 
-        const total = strokes.length;
+        const total = strokeData.length;
         const complete = Math.floor(progress * total);
 
         for (let i = 0; i < total; i++) {
-          const stroke = strokes[i];
+          const stroke = strokeData[i];
           if (i < complete) {
             drawStroke(stroke, 1, true);
           } else if (i === complete) {
@@ -603,56 +601,82 @@
         }
       }
 
-      // ----- Animation loop (KanjiVgAnimate style) -----
-      function animate() {
-        if (!isAnimating) return;
-        currentPoint += ANIMATION_SPEED;
-        const progress = Math.min(currentPoint / strokes.length, 1);
+      // ----- Animation loop (EXACT kanjivganimate time-based logic) -----
+      function animate(timestamp) {
+        if (!animating) return;
+
+        if (!startTime) {
+          startTime = timestamp;
+        }
+
+        elapsedTime = timestamp - startTime;
+        
+        // Calculate which stroke and point we should be at
+        const totalStrokes = strokeData.length;
+        const timePerStroke = DEFAULT_DURATION;
+        const totalTime = totalStrokes * timePerStroke;
+        
+        const progress = Math.min(elapsedTime / totalTime, 1);
         drawAll(progress);
 
         if (progress < 1) {
-          const done = Math.floor(progress * strokes.length);
-          document.getElementById('statusLabel').textContent = `⏳ ${Math.round(progress * 100)}% · ${done}/${strokes.length}`;
+          const done = Math.floor(progress * totalStrokes);
+          const percent = Math.round(progress * 100);
+          document.getElementById('statusLabel').textContent = `⏳ ${percent}% · ${done}/${totalStrokes}`;
           animationId = requestAnimationFrame(animate);
         } else {
-          isAnimating = false;
+          animating = false;
           document.getElementById('statusLabel').textContent = '✅ Complete · all strokes traced';
           animationId = null;
+          startTime = 0;
         }
       }
 
       // ----- Public functions -----
       function startTrace(text) {
-        if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-        isAnimating = false;
+        if (animationId) { 
+          cancelAnimationFrame(animationId); 
+          animationId = null; 
+        }
+        animating = false;
+        startTime = 0;
+        
         const rawText = text || document.getElementById('wordInput').value || 'ABC';
-        strokes = generateStrokes(rawText);
-        if (!strokes.length) {
+        strokeData = generateStrokes(rawText);
+        
+        if (!strokeData.length) {
           ctx.clearRect(0, 0, W, H);
           document.getElementById('statusLabel').textContent = '⏺ No strokes';
           return;
         }
-        currentPoint = 0;
-        isAnimating = true;
+        
+        animating = true;
         document.getElementById('statusLabel').textContent = '▶ Animating...';
-        animate();
+        animationId = requestAnimationFrame(animate);
       }
 
       function clearTrace() {
-        if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-        isAnimating = false;
-        strokes = [];
-        currentPoint = 0;
+        if (animationId) { 
+          cancelAnimationFrame(animationId); 
+          animationId = null; 
+        }
+        animating = false;
+        startTime = 0;
+        strokeData = [];
         ctx.clearRect(0, 0, W, H);
         document.getElementById('statusLabel').textContent = '⏺ Cleared';
       }
 
       function resetTrace() {
-        if (strokes.length) {
-          currentPoint = 0;
-          isAnimating = true;
+        if (strokeData.length) {
+          if (animationId) { 
+            cancelAnimationFrame(animationId); 
+            animationId = null; 
+          }
+          startTime = 0;
+          animating = true;
           document.getElementById('statusLabel').textContent = '▶ Replaying...';
-          animate();
+          animationId = requestAnimationFrame(animate);
         }
       }
 
