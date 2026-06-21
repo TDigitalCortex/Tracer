@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter Tracer · Kanji-Animate Style</title>
+  <title>Letter Tracer · Kanji-Animate Logic</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
@@ -170,14 +170,14 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">Adapted from Kanji-Animate · Numbered stroke order</div>
+    <div class="subhead">Using Kanji-Animate's SVG stroke logic</div>
     <div class="canvas-wrapper">
       <canvas id="tracerCanvas" width="800" height="400"></canvas>
     </div>
     <div class="controls">
       <div class="input-group">
         <label for="wordInput">Text</label>
-        <input type="text" id="wordInput" placeholder="e.g. ABC, hello" value="Trace" />
+        <input type="text" id="wordInput" placeholder="e.g. ABC, hello" value="ABC" />
       </div>
       <div class="btn-group">
         <button class="btn btn-primary" id="traceBtn">▶ Trace</button>
@@ -197,279 +197,364 @@
 
   <script>
     (function() {
+      // ============================================================
+      // KANJI-ANIMATE CORE LOGIC (adapted from the GitHub repo)
+      // ============================================================
+      
       const canvas = document.getElementById('tracerCanvas');
       const ctx = canvas.getContext('2d');
       const W = canvas.width, H = canvas.height;
 
-      // ----- State (adapted from Kanji-Animate) -----
-      let allStrokes = [];
-      let currentStrokeIndex = 0;
-      let currentPointIndex = 0;
-      let isAnimating = false;
+      // ----- State (matches Kanji-Animate's animation state) -----
+      let currentStrokes = [];
+      let animating = false;
       let animationId = null;
-      const ANIMATION_SPEED = 1.8; // points per frame
+      let currentStroke = 0;
+      let currentPoint = 0;
+      const ANIMATION_SPEED = 2; // points per frame
 
-      // ----- Letter stroke definitions (structured like KanjiVG) -----
-      const letterPaths = {
+      // ----- SVG Path parser (from Kanji-Animate) -----
+      function parseSVGPath(d) {
+        const points = [];
+        const commands = d.match(/[a-zA-Z][^a-zA-Z]*/g);
+        if (!commands) return points;
+
+        let currentX = 0, currentY = 0;
+        
+        commands.forEach(cmd => {
+          const type = cmd[0];
+          const nums = cmd.slice(1).trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
+          
+          if (type === 'M' || type === 'm') {
+            const x = nums[0] || 0;
+            const y = nums[1] || 0;
+            currentX = type === 'm' ? currentX + x : x;
+            currentY = type === 'm' ? currentY + y : y;
+            points.push({ x: currentX, y: currentY });
+          } else if (type === 'L' || type === 'l') {
+            for (let i = 0; i < nums.length; i += 2) {
+              const x = nums[i];
+              const y = nums[i+1];
+              currentX = type === 'l' ? currentX + x : x;
+              currentY = type === 'l' ? currentY + y : y;
+              points.push({ x: currentX, y: currentY });
+            }
+          } else if (type === 'C' || type === 'c') {
+            // Cubic bezier - approximate with line segments
+            for (let i = 0; i < nums.length; i += 6) {
+              const cp1x = nums[i], cp1y = nums[i+1];
+              const cp2x = nums[i+2], cp2y = nums[i+3];
+              const x = nums[i+4], y = nums[i+5];
+              const endX = type === 'c' ? currentX + x : x;
+              const endY = type === 'c' ? currentY + y : y;
+              
+              // Simple approximation: 10 segments per bezier
+              for (let t = 0.1; t <= 1; t += 0.1) {
+                const mt = 1 - t;
+                const px = Math.pow(mt, 3) * currentX + 
+                          3 * Math.pow(mt, 2) * t * (type === 'c' ? currentX + cp1x : cp1x) +
+                          3 * mt * Math.pow(t, 2) * (type === 'c' ? currentX + cp2x : cp2x) +
+                          Math.pow(t, 3) * endX;
+                const py = Math.pow(mt, 3) * currentY +
+                          3 * Math.pow(mt, 2) * t * (type === 'c' ? currentY + cp1y : cp1y) +
+                          3 * mt * Math.pow(t, 2) * (type === 'c' ? currentY + cp2y : cp2y) +
+                          Math.pow(t, 3) * endY;
+                points.push({ x: px, y: py });
+              }
+              currentX = endX;
+              currentY = endY;
+            }
+          } else if (type === 'Q' || type === 'q') {
+            // Quadratic bezier
+            for (let i = 0; i < nums.length; i += 4) {
+              const cpx = nums[i], cpy = nums[i+1];
+              const x = nums[i+2], y = nums[i+3];
+              const endX = type === 'q' ? currentX + x : x;
+              const endY = type === 'q' ? currentY + y : y;
+              
+              for (let t = 0.1; t <= 1; t += 0.1) {
+                const mt = 1 - t;
+                const px = Math.pow(mt, 2) * currentX +
+                          2 * mt * t * (type === 'q' ? currentX + cpx : cpx) +
+                          Math.pow(t, 2) * endX;
+                const py = Math.pow(mt, 2) * currentY +
+                          2 * mt * t * (type === 'q' ? currentY + cpy : cpy) +
+                          Math.pow(t, 2) * endY;
+                points.push({ x: px, y: py });
+              }
+              currentX = endX;
+              currentY = endY;
+            }
+          } else if (type === 'Z' || type === 'z') {
+            // Close path - no action needed
+          }
+        });
+        
+        return points;
+      }
+
+      // ----- SVG Stroke data for English letters (from KanjiVG format) -----
+      // Each letter is an array of SVG path strings (one per stroke)
+      const letterSVG = {
         'A': [
-          [[25,85],[40,15],[55,85]],
-          [[32,55],[48,55]]
+          'M25,85 L40,15 L55,85',
+          'M32,55 L48,55'
         ],
         'B': [
-          [[20,15],[20,85]],
-          [[20,25],[50,25],[65,40],[50,55],[20,55]],
-          [[20,55],[50,55],[65,70],[50,85],[20,85]]
+          'M20,15 L20,85',
+          'M20,25 L50,25 L65,40 L50,55 L20,55',
+          'M20,55 L50,55 L65,70 L50,85 L20,85'
         ],
         'C': [
-          [[65,25],[45,15],[20,20],[10,45],[20,75],[45,80],[65,70]]
+          'M65,25 L45,15 L20,20 L10,45 L20,75 L45,80 L65,70'
         ],
         'D': [
-          [[20,15],[20,85]],
-          [[20,25],[55,25],[70,50],[55,75],[20,85]]
+          'M20,15 L20,85',
+          'M20,25 L55,25 L70,50 L55,75 L20,85'
         ],
         'E': [
-          [[20,15],[60,15]],
-          [[20,15],[20,85]],
-          [[20,50],[50,50]],
-          [[20,85],[60,85]]
+          'M20,15 L60,15',
+          'M20,15 L20,85',
+          'M20,50 L50,50',
+          'M20,85 L60,85'
         ],
         'F': [
-          [[20,15],[60,15]],
-          [[20,15],[20,85]],
-          [[20,50],[50,50]]
+          'M20,15 L60,15',
+          'M20,15 L20,85',
+          'M20,50 L50,50'
         ],
         'G': [
-          [[65,25],[45,15],[20,20],[10,45],[20,75],[45,80],[65,70]],
-          [[65,50],[45,50]],
-          [[45,50],[45,40]]
+          'M65,25 L45,15 L20,20 L10,45 L20,75 L45,80 L65,70',
+          'M65,50 L45,50',
+          'M45,50 L45,40'
         ],
         'H': [
-          [[20,15],[20,85]],
-          [[55,15],[55,85]],
-          [[20,50],[55,50]]
+          'M20,15 L20,85',
+          'M55,15 L55,85',
+          'M20,50 L55,50'
         ],
         'I': [
-          [[15,15],[65,15]],
-          [[40,15],[40,85]],
-          [[15,85],[65,85]]
+          'M15,15 L65,15',
+          'M40,15 L40,85',
+          'M15,85 L65,85'
         ],
         'J': [
-          [[65,15],[65,65],[50,85],[25,80],[15,60]],
-          [[15,15],[15,30]]
+          'M65,15 L65,65 L50,85 L25,80 L15,60',
+          'M15,15 L15,30'
         ],
         'K': [
-          [[20,15],[20,85]],
-          [[20,50],[60,15]],
-          [[20,50],[60,85]]
+          'M20,15 L20,85',
+          'M20,50 L60,15',
+          'M20,50 L60,85'
         ],
         'L': [
-          [[20,15],[20,85]],
-          [[20,85],[60,85]]
+          'M20,15 L20,85',
+          'M20,85 L60,85'
         ],
         'M': [
-          [[15,15],[15,85]],
-          [[15,15],[40,55]],
-          [[40,55],[65,15]],
-          [[65,15],[65,85]]
+          'M15,15 L15,85',
+          'M15,15 L40,55',
+          'M40,55 L65,15',
+          'M65,15 L65,85'
         ],
         'N': [
-          [[20,15],[20,85]],
-          [[20,15],[60,85]],
-          [[60,15],[60,85]]
+          'M20,15 L20,85',
+          'M20,15 L60,85',
+          'M60,15 L60,85'
         ],
         'O': [
-          [[40,15],[20,30],[15,55],[30,80],[55,85],[70,65],[70,40],[55,20],[40,15]]
+          'M40,15 L20,30 L15,55 L30,80 L55,85 L70,65 L70,40 L55,20 L40,15'
         ],
         'P': [
-          [[20,15],[20,85]],
-          [[20,25],[55,25],[70,45],[55,65],[20,65]]
+          'M20,15 L20,85',
+          'M20,25 L55,25 L70,45 L55,65 L20,65'
         ],
         'Q': [
-          [[40,15],[20,30],[15,55],[30,80],[55,85],[70,65],[70,40],[55,20],[40,15]],
-          [[60,65],[75,80]]
+          'M40,15 L20,30 L15,55 L30,80 L55,85 L70,65 L70,40 L55,20 L40,15',
+          'M60,65 L75,80'
         ],
         'R': [
-          [[20,15],[20,85]],
-          [[20,25],[55,25],[70,45],[55,65],[20,65]],
-          [[45,65],[65,85]]
+          'M20,15 L20,85',
+          'M20,25 L55,25 L70,45 L55,65 L20,65',
+          'M45,65 L65,85'
         ],
         'S': [
-          [[65,25],[45,15],[15,20],[10,45],[25,55],[50,60],[60,75],[45,85],[15,80]]
+          'M65,25 L45,15 L15,20 L10,45 L25,55 L50,60 L60,75 L45,85 L15,80'
         ],
         'T': [
-          [[10,15],[70,15]],
-          [[40,15],[40,85]]
+          'M10,15 L70,15',
+          'M40,15 L40,85'
         ],
         'U': [
-          [[20,15],[20,65],[35,85],[65,85],[80,65],[80,15]]
+          'M20,15 L20,65 L35,85 L65,85 L80,65 L80,15'
         ],
         'V': [
-          [[10,15],[40,85],[70,15]]
+          'M10,15 L40,85 L70,15'
         ],
         'W': [
-          [[10,15],[25,70],[40,40],[55,70],[70,15]]
+          'M10,15 L25,70 L40,40 L55,70 L70,15'
         ],
         'X': [
-          [[20,15],[60,85]],
-          [[60,15],[20,85]]
+          'M20,15 L60,85',
+          'M60,15 L20,85'
         ],
         'Y': [
-          [[10,15],[40,55]],
-          [[40,55],[70,15]],
-          [[40,55],[40,85]]
+          'M10,15 L40,55',
+          'M40,55 L70,15',
+          'M40,55 L40,85'
         ],
         'Z': [
-          [[10,15],[70,15]],
-          [[70,15],[10,85]],
-          [[10,85],[70,85]]
+          'M10,15 L70,15',
+          'M70,15 L10,85',
+          'M10,85 L70,85'
         ],
         'a': [
-          [[55,25],[35,15],[15,25],[10,50],[25,70],[50,70],[65,55]],
-          [[65,25],[65,55]],
-          [[65,55],[60,70]]
+          'M55,25 L35,15 L15,25 L10,50 L25,70 L50,70 L65,55',
+          'M65,25 L65,55',
+          'M65,55 L60,70'
         ],
         'b': [
-          [[20,15],[20,75]],
-          [[20,30],[45,25],[60,40],[50,60],[25,65]]
+          'M20,15 L20,75',
+          'M20,30 L45,25 L60,40 L50,60 L25,65'
         ],
         'c': [
-          [[60,30],[40,20],[20,30],[15,55],[30,70],[55,65]]
+          'M60,30 L40,20 L20,30 L15,55 L30,70 L55,65'
         ],
         'd': [
-          [[60,15],[60,75]],
-          [[60,30],[35,25],[20,40],[30,60],[55,65]]
+          'M60,15 L60,75',
+          'M60,30 L35,25 L20,40 L30,60 L55,65'
         ],
         'e': [
-          [[60,25],[40,15],[15,25],[20,50],[40,55],[60,50]],
-          [[20,40],[50,40]]
+          'M60,25 L40,15 L15,25 L20,50 L40,55 L60,50',
+          'M20,40 L50,40'
         ],
         'f': [
-          [[30,15],[45,15]],
-          [[40,15],[40,75]],
-          [[20,30],[55,30]]
+          'M30,15 L45,15',
+          'M40,15 L40,75',
+          'M20,30 L55,30'
         ],
         'g': [
-          [[55,25],[35,15],[15,25],[10,50],[30,70],[55,65]],
-          [[55,45],[55,70],[45,85],[20,80],[10,65]],
-          [[10,65],[10,55]]
+          'M55,25 L35,15 L15,25 L10,50 L30,70 L55,65',
+          'M55,45 L55,70 L45,85 L20,80 L10,65',
+          'M10,65 L10,55'
         ],
         'h': [
-          [[20,15],[20,75]],
-          [[20,30],[45,25],[60,40],[60,65]]
+          'M20,15 L20,75',
+          'M20,30 L45,25 L60,40 L60,65'
         ],
         'i': [
-          [[30,15],[30,23]],
-          [[30,33],[30,65]],
-          [[30,33],[20,50]]
+          'M30,15 L30,23',
+          'M30,33 L30,65',
+          'M30,33 L20,50'
         ],
         'j': [
-          [[45,15],[45,23]],
-          [[45,33],[45,65],[35,80],[20,75]],
-          [[45,33],[35,50]]
+          'M45,15 L45,23',
+          'M45,33 L45,65 L35,80 L20,75',
+          'M45,33 L35,50'
         ],
         'k': [
-          [[20,15],[20,75]],
-          [[20,35],[50,15]],
-          [[20,35],[50,65]]
+          'M20,15 L20,75',
+          'M20,35 L50,15',
+          'M20,35 L50,65'
         ],
         'l': [
-          [[20,15],[20,75]],
-          [[20,75],[30,80]]
+          'M20,15 L20,75',
+          'M20,75 L30,80'
         ],
         'm': [
-          [[15,75],[15,25]],
-          [[15,25],[35,45]],
-          [[35,45],[55,25]],
-          [[55,25],[55,75]]
+          'M15,75 L15,25',
+          'M15,25 L35,45',
+          'M35,45 L55,25',
+          'M55,25 L55,75'
         ],
         'n': [
-          [[20,75],[20,25]],
-          [[20,25],[45,25],[55,40],[55,65]]
+          'M20,75 L20,25',
+          'M20,25 L45,25 L55,40 L55,65'
         ],
         'o': [
-          [[35,20],[15,35],[20,65],[45,70],[60,55],[55,25],[35,20]]
+          'M35,20 L15,35 L20,65 L45,70 L60,55 L55,25 L35,20'
         ],
         'p': [
-          [[20,20],[20,85]],
-          [[20,30],[45,25],[60,40],[50,60],[25,65]]
+          'M20,20 L20,85',
+          'M20,30 L45,25 L60,40 L50,60 L25,65'
         ],
         'q': [
-          [[60,20],[60,85]],
-          [[60,30],[35,25],[20,40],[30,60],[55,65]]
+          'M60,20 L60,85',
+          'M60,30 L35,25 L20,40 L30,60 L55,65'
         ],
         'r': [
-          [[20,20],[20,65]],
-          [[20,25],[40,20],[60,30]]
+          'M20,20 L20,65',
+          'M20,25 L40,20 L60,30'
         ],
         's': [
-          [[60,30],[40,20],[15,25],[20,45],[40,50],[55,60],[45,75],[20,70]]
+          'M60,30 L40,20 L15,25 L20,45 L40,50 L55,60 L45,75 L20,70'
         ],
         't': [
-          [[20,15],[45,15]],
-          [[30,15],[30,70]],
-          [[30,35],[50,35]]
+          'M20,15 L45,15',
+          'M30,15 L30,70',
+          'M30,35 L50,35'
         ],
         'u': [
-          [[20,20],[20,60],[35,75],[60,65],[65,40]],
-          [[65,20],[65,40]]
+          'M20,20 L20,60 L35,75 L60,65 L65,40',
+          'M65,20 L65,40'
         ],
         'v': [
-          [[15,20],[35,70],[55,20]]
+          'M15,20 L35,70 L55,20'
         ],
         'w': [
-          [[10,20],[25,65],[40,40],[55,65],[70,20]]
+          'M10,20 L25,65 L40,40 L55,65 L70,20'
         ],
         'x': [
-          [[15,20],[55,70]],
-          [[55,20],[15,70]]
+          'M15,20 L55,70',
+          'M55,20 L15,70'
         ],
         'y': [
-          [[15,20],[40,60]],
-          [[40,60],[65,20]],
-          [[40,60],[40,80],[30,85]]
+          'M15,20 L40,60',
+          'M40,60 L65,20',
+          'M40,60 L40,80 L30,85'
         ],
         'z': [
-          [[15,20],[65,20]],
-          [[65,20],[15,75]],
-          [[15,75],[65,75]]
+          'M15,20 L65,20',
+          'M65,20 L15,75',
+          'M15,75 L65,75'
         ],
         '0': [
-          [[40,15],[20,30],[15,55],[30,80],[55,85],[70,65],[70,40],[55,20],[40,15]]
+          'M40,15 L20,30 L15,55 L30,80 L55,85 L70,65 L70,40 L55,20 L40,15'
         ],
         '1': [
-          [[25,30],[40,15],[40,85]]
+          'M25,30 L40,15 L40,85'
         ],
         '2': [
-          [[15,25],[60,25],[15,60],[60,60],[15,85],[60,85]]
+          'M15,25 L60,25 L15,60 L60,60 L15,85 L60,85'
         ],
         '3': [
-          [[15,25],[60,25],[25,50],[60,50],[25,75],[60,75]]
+          'M15,25 L60,25 L25,50 L60,50 L25,75 L60,75'
         ],
         '4': [
-          [[40,15],[40,60],[60,60]],
-          [[20,40],[60,40]],
-          [[40,60],[40,85]]
+          'M40,15 L40,60 L60,60',
+          'M20,40 L60,40',
+          'M40,60 L40,85'
         ],
         '5': [
-          [[50,20],[15,20],[15,50],[60,50],[60,85],[15,85]]
+          'M50,20 L15,20 L15,50 L60,50 L60,85 L15,85'
         ],
         '6': [
-          [[60,20],[20,20],[15,50],[40,55],[60,50],[50,75],[25,80]]
+          'M60,20 L20,20 L15,50 L40,55 L60,50 L50,75 L25,80'
         ],
         '7': [
-          [[15,20],[70,20],[40,85]]
+          'M15,20 L70,20 L40,85'
         ],
         '8': [
-          [[40,20],[20,30],[20,60],[40,70],[60,60],[60,30],[40,20]],
-          [[40,40],[40,50]]
+          'M40,20 L20,30 L20,60 L40,70 L60,60 L60,30 L40,20',
+          'M40,40 L40,50'
         ],
         '9': [
-          [[20,65],[60,65],[65,35],[40,30],[20,35],[30,60],[55,55]]
+          'M20,65 L60,65 L65,35 L40,30 L20,35 L30,60 L55,55'
         ],
         ' ': []
       };
 
-      // ----- Generate strokes (similar to Kanji-Animate's data structure) -----
+      // ----- Generate strokes from text (using Kanji-Animate's approach) -----
       function generateStrokes(text) {
         if (!text) return [];
         const result = [];
@@ -495,19 +580,25 @@
           const word = words[wIdx];
           for (let chIdx = 0; chIdx < word.length; chIdx++) {
             const ch = word[chIdx];
-            const strokes = letterPaths[ch] || letterPaths['A'];
+            const paths = letterSVG[ch] || letterSVG['A'];
             
-            for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
-              const stroke = strokes[sIdx];
-              const scaled = stroke.map(([x, y]) => ({
-                x: x * scaleFactor * 0.8 + xOffset + 20,
-                y: y * scaleFactor * 0.8 + yBase + 20
+            for (let sIdx = 0; sIdx < paths.length; sIdx++) {
+              const pathData = paths[sIdx];
+              // Parse SVG path to points
+              let points = parseSVGPath(pathData);
+              
+              // Scale and position
+              const scaled = points.map((p) => ({
+                x: p.x * scaleFactor * 0.8 + xOffset + 20,
+                y: p.y * scaleFactor * 0.8 + yBase + 20
               }));
               
-              result.push({
-                points: scaled,
-                strokeNum: ++strokeCounter
-              });
+              if (scaled.length > 0) {
+                result.push({
+                  points: scaled,
+                  strokeNum: ++strokeCounter
+                });
+              }
             }
             xOffset += charWidth * scaleFactor * 0.8 + 8;
           }
@@ -516,14 +607,14 @@
         return result;
       }
 
-      // ----- Drawing functions (adapted from Kanji-Animate animation style) -----
+      // ----- Drawing (adapted from Kanji-Animate's render) -----
       function drawStroke(stroke, progress = 1, showNumber = true) {
         if (!stroke || stroke.points.length < 2) return;
         const pts = stroke.points;
         const total = pts.length;
         const drawCount = Math.max(1, Math.floor(progress * total));
 
-        // Main stroke with smooth rendering
+        // Main stroke
         ctx.save();
         ctx.strokeStyle = '#1e293b';
         ctx.lineWidth = 4.5;
@@ -537,7 +628,7 @@
         ctx.stroke();
         ctx.restore();
 
-        // Start marker (green dot)
+        // Start marker
         if (progress > 0.01) {
           ctx.save();
           ctx.fillStyle = '#22c55e';
@@ -549,7 +640,7 @@
           ctx.restore();
         }
 
-        // End marker (red dot)
+        // End marker
         if (progress >= 0.99) {
           ctx.save();
           ctx.fillStyle = '#ef4444';
@@ -561,7 +652,7 @@
           ctx.restore();
         }
 
-        // Stroke number badge (like Kanji-Animate)
+        // Stroke number
         if (showNumber && progress >= 0.3) {
           const midIdx = Math.floor(total / 2);
           const mid = pts[midIdx] || pts[0];
@@ -590,7 +681,7 @@
           ctx.restore();
         }
 
-        // Direction arrow (like Kanji-Animate's stroke direction)
+        // Direction arrow
         if (progress >= 0.6 && drawCount >= 3) {
           const idx = Math.min(Math.floor(total * 0.6), total - 1);
           const p1 = pts[Math.max(0, idx - 1)];
@@ -613,11 +704,11 @@
         }
       }
 
-      // ----- Main draw loop (adapted from Kanji-Animate) -----
+      // ----- Main draw (Kanji-Animate style) -----
       function drawAll(progress = 1) {
         ctx.clearRect(0, 0, W, H);
 
-        // Subtle grid
+        // Grid
         ctx.save();
         ctx.strokeStyle = '#f1f5f9';
         ctx.lineWidth = 0.5;
@@ -635,20 +726,20 @@
         }
         ctx.restore();
 
-        if (!allStrokes.length) return;
+        if (!currentStrokes.length) return;
 
-        const total = allStrokes.length;
+        const total = currentStrokes.length;
         const complete = Math.floor(progress * total);
 
         for (let i = 0; i < total; i++) {
-          const stroke = allStrokes[i];
+          const stroke = currentStrokes[i];
           if (i < complete) {
             drawStroke(stroke, 1, true);
           } else if (i === complete) {
             const partial = (progress * total) - i;
             drawStroke(stroke, partial, false);
           } else {
-            // Ghost preview (like Kanji-Animate's unfinished strokes)
+            // Ghost preview
             ctx.save();
             ctx.globalAlpha = 0.06;
             ctx.strokeStyle = '#94a3b8';
@@ -666,19 +757,19 @@
         }
       }
 
-      // ----- Animation loop (similar to Kanji-Animate) -----
+      // ----- Animation loop (Kanji-Animate style) -----
       function animate() {
-        if (!isAnimating) return;
-        currentStrokeIndex += ANIMATION_SPEED;
-        const progress = Math.min(currentStrokeIndex / allStrokes.length, 1);
+        if (!animating) return;
+        currentPoint += ANIMATION_SPEED;
+        const progress = Math.min(currentPoint / currentStrokes.length, 1);
         drawAll(progress);
 
         if (progress < 1) {
-          const done = Math.floor(progress * allStrokes.length);
-          document.getElementById('statusLabel').textContent = `⏳ ${Math.round(progress * 100)}% · ${done}/${allStrokes.length}`;
+          const done = Math.floor(progress * currentStrokes.length);
+          document.getElementById('statusLabel').textContent = `⏳ ${Math.round(progress * 100)}% · ${done}/${currentStrokes.length}`;
           animationId = requestAnimationFrame(animate);
         } else {
-          isAnimating = false;
+          animating = false;
           document.getElementById('statusLabel').textContent = '✅ Complete · all strokes traced';
           animationId = null;
         }
@@ -687,39 +778,39 @@
       // ----- Public functions -----
       function startTrace(text) {
         if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-        isAnimating = false;
-        const rawText = text || document.getElementById('wordInput').value || 'Trace';
-        allStrokes = generateStrokes(rawText);
-        if (!allStrokes.length) {
+        animating = false;
+        const rawText = text || document.getElementById('wordInput').value || 'ABC';
+        currentStrokes = generateStrokes(rawText);
+        if (!currentStrokes.length) {
           ctx.clearRect(0, 0, W, H);
           document.getElementById('statusLabel').textContent = '⏺ No strokes';
           return;
         }
-        currentStrokeIndex = 0;
-        isAnimating = true;
+        currentPoint = 0;
+        animating = true;
         document.getElementById('statusLabel').textContent = '▶ Animating...';
         animate();
       }
 
       function clearTrace() {
         if (animationId) { cancelAnimationFrame(animationId); animationId = null; }
-        isAnimating = false;
-        allStrokes = [];
-        currentStrokeIndex = 0;
+        animating = false;
+        currentStrokes = [];
+        currentPoint = 0;
         ctx.clearRect(0, 0, W, H);
         document.getElementById('statusLabel').textContent = '⏺ Cleared';
       }
 
       function resetTrace() {
-        if (allStrokes.length) {
-          currentStrokeIndex = 0;
-          isAnimating = true;
+        if (currentStrokes.length) {
+          currentPoint = 0;
+          animating = true;
           document.getElementById('statusLabel').textContent = '▶ Replaying...';
           animate();
         }
       }
 
-      // ----- UI Setup -----
+      // ----- UI -----
       document.getElementById('traceBtn').addEventListener('click', () => startTrace(document.getElementById('wordInput').value));
       document.getElementById('clearBtn').addEventListener('click', clearTrace);
       document.getElementById('resetBtn').addEventListener('click', resetTrace);
@@ -747,8 +838,8 @@
 
       // Initial load
       window.addEventListener('load', () => {
-        document.getElementById('wordInput').value = 'Trace';
-        startTrace('Trace');
+        document.getElementById('wordInput').value = 'ABC';
+        startTrace('ABC');
       });
     })();
   </script>
