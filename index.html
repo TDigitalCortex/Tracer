@@ -50,22 +50,22 @@
       margin-bottom: 1.5rem;
       min-height: 400px;
       position: relative;
-      overflow: hidden;
+      overflow: auto;
     }
     #svgContainer {
       width: 100%;
-      height: 400px;
+      min-height: 400px;
       display: flex;
       justify-content: center;
       align-items: center;
       background: #ffffff;
       border-radius: 16px;
-      overflow: auto;
+      overflow: visible;
       position: relative;
     }
     #svgContainer svg {
       width: 100%;
-      height: 100%;
+      height: auto;
       display: block;
       background: white;
     }
@@ -213,9 +213,7 @@
       const statusLabel = document.getElementById('statusLabel');
       const inputField = document.getElementById('wordInput');
 
-      // ----- Correct letter stroke data (KanjiVG format) -----
-      // G: 1 stroke (main curve) - no extra horizontal/vertical
-      // J: 1 stroke (main curve) - no extra top horizontal
+      // ----- Letter stroke data (KanjiVG format) -----
       const letterStrokes = {
         'A': [
           'M25,85 L40,15 L55,85',
@@ -244,7 +242,8 @@
           'M20,50 L50,50'
         ],
         'G': [
-          'M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'
+          'M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50',
+          'M55,50 L45,50'
         ],
         'H': [
           'M20,15 L20,85',
@@ -473,63 +472,60 @@
         ' ': []
       };
 
-      // ----- Generate SVG with proper stroke paths and wrap logic -----
+      // ----- Generate SVG with proper wrap logic -----
       function generateSVG(text) {
         if (!text) return null;
         
         const words = text.split(' ');
         const svgWidth = 800;
-        const svgHeight = 400;
         const charWidth = 50;
         const gap = 30;
         const scaleFactor = 1.0;
         const maxWidth = svgWidth - 40;
+        const lineHeight = 90;
+        const yBase = 55;
 
-        let allPaths = [];
-        let strokeCounter = 0;
-        let xOffset = 20;
-        let yBase = 55;
-        let currentLine = 0;
-        let lineHeight = 90;
-
-        // Calculate total width needed for each word
-        let wordWidths = words.map(word => {
+        // Calculate width for each word
+        const wordWidths = words.map(word => {
           let width = 0;
           for (let ch of word) {
+            const strokes = letterStrokes[ch] || letterStrokes['A'];
             width += charWidth * scaleFactor * 0.9 + 6;
           }
           return width;
         });
 
-        // Layout words with wrapping
-        let lines = [];
-        let currentLineWords = [];
-        let currentLineWidth = 0;
+        // Layout with wrapping
+        const lines = [];
+        let currentLine = [];
+        let currentWidth = 0;
 
         for (let i = 0; i < words.length; i++) {
           const word = words[i];
-          const wordWidth = wordWidths[i];
+          const wWidth = wordWidths[i];
+          const spacing = currentLine.length > 0 ? gap : 0;
           
-          if (currentLineWidth + wordWidth + (currentLineWords.length > 0 ? gap : 0) > maxWidth) {
-            // Start new line
-            if (currentLineWords.length > 0) {
-              lines.push(currentLineWords);
-            }
-            currentLineWords = [word];
-            currentLineWidth = wordWidth;
+          if (currentWidth + wWidth + spacing > maxWidth && currentLine.length > 0) {
+            lines.push(currentLine);
+            currentLine = [word];
+            currentWidth = wWidth;
           } else {
-            currentLineWords.push(word);
-            currentLineWidth += wordWidth + (currentLineWords.length > 1 ? gap : 0);
+            currentLine.push(word);
+            currentWidth += wWidth + spacing;
           }
         }
-        if (currentLineWords.length > 0) {
-          lines.push(currentLineWords);
+        if (currentLine.length > 0) {
+          lines.push(currentLine);
         }
+
+        let allPaths = [];
+        let strokeCounter = 0;
 
         // Generate paths for each line
         for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
           const lineWords = lines[lineIdx];
-          xOffset = 20;
+          let xOffset = 20;
+          const yOffset = yBase + (lineIdx * lineHeight);
           
           for (let wIdx = 0; wIdx < lineWords.length; wIdx++) {
             const word = lineWords[wIdx];
@@ -541,7 +537,6 @@
               for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
                 const pathData = strokes[sIdx];
                 
-                // Transform the path with translation and scaling
                 const transformed = pathData.replace(/([MLCQA])([^MLCQA]*)/g, (match, cmd, coords) => {
                   const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
                   const scaled = nums.map((n, i) => {
@@ -549,7 +544,7 @@
                     if (i % 2 === 0) {
                       return val + xOffset + 15;
                     } else {
-                      return val + yBase + (lineIdx * lineHeight) + 20;
+                      return val + yOffset + 20;
                     }
                   });
                   return cmd + scaled.join(' ');
@@ -566,8 +561,8 @@
           }
         }
 
-        // Calculate final SVG height based on number of lines
-        const finalHeight = Math.max(svgHeight, (lines.length * lineHeight) + 100);
+        // Calculate final height
+        const finalHeight = Math.max(400, lines.length * lineHeight + 100);
 
         // Build SVG
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
@@ -581,7 +576,7 @@
         return svg;
       }
 
-      // ----- SVG stroke animation (Kanji-Animate style) -----
+      // ----- SVG stroke animation -----
       function animateStrokes(svgElement, duration = 500) {
         const paths = svgElement.querySelectorAll('path');
         if (!paths.length) {
@@ -593,7 +588,6 @@
         let startTime = null;
         let animationId = null;
 
-        // Calculate lengths and set up each path
         paths.forEach((path) => {
           try {
             const length = path.getTotalLength ? path.getTotalLength() : 100;
@@ -676,7 +670,7 @@
         }
 
         svgElement.style.width = '100%';
-        svgElement.style.height = '100%';
+        svgElement.style.height = 'auto';
         svgElement.style.display = 'block';
         svgElement.style.background = 'white';
 
