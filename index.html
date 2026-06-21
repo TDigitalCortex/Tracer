@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Letter Tracer · KanjiVgAnimate Exact</title>
+  <title>Letter Tracer · KanjiVgAnimate Actual</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz@14..32&display=swap" rel="stylesheet" />
@@ -49,6 +49,7 @@
       border: 1px solid #e2e8f0;
       margin-bottom: 1.5rem;
       position: relative;
+      min-height: 400px;
     }
     #tracerCanvas {
       display: block;
@@ -171,8 +172,8 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">KanjiVgAnimate exact logic · No lag · Full alphabet</div>
-    <div class="canvas-wrapper">
+    <div class="subhead">Actual KanjiVgAnimate library · SVG stroke animation</div>
+    <div class="canvas-wrapper" id="canvasWrapper">
       <canvas id="tracerCanvas" width="800" height="400"></canvas>
     </div>
     <div class="controls">
@@ -196,136 +197,26 @@
     </div>
   </div>
 
+  <!-- Load KanjiVgAnimate library from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/kanjivganimate@0.2.1/dist/kanjivganimate.min.js"></script>
+  
   <script>
     (function() {
       // ============================================================
-      // EXACT KANJIVGANIMATE LOGIC - NO MODIFICATIONS
+      // USING ACTUAL KANJIVGANIMATE LIBRARY - CORRECT APPROACH
       // ============================================================
       
       const canvas = document.getElementById('tracerCanvas');
       const ctx = canvas.getContext('2d');
       const W = canvas.width, H = canvas.height;
+      const wrapper = document.getElementById('canvasWrapper');
 
-      // ----- State (matches kanjivganimate exactly) -----
-      let strokeData = [];
+      // ----- State -----
+      let currentSVG = null;
+      let animator = null;
       let isAnimating = false;
-      let animationId = null;
-      let startTime = 0;
-      let elapsed = 0;
-      const STROKE_DURATION = 500; // Default from kanjivganimate
 
-      // ----- SVG Path parser (exact from kanjivganimate) -----
-      function parseSVGPath(pathData) {
-        const points = [];
-        const commands = pathData.match(/[a-zA-Z][^a-zA-Z]*/g);
-        if (!commands) return points;
-
-        let currentX = 0, currentY = 0;
-        
-        commands.forEach(cmd => {
-          const type = cmd[0];
-          const nums = cmd.slice(1).trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
-          
-          if (type === 'M' || type === 'm') {
-            const x = nums[0] || 0;
-            const y = nums[1] || 0;
-            currentX = type === 'm' ? currentX + x : x;
-            currentY = type === 'm' ? currentY + y : y;
-            points.push({ x: currentX, y: currentY });
-          } else if (type === 'L' || type === 'l') {
-            for (let i = 0; i < nums.length; i += 2) {
-              const x = nums[i];
-              const y = nums[i+1];
-              currentX = type === 'l' ? currentX + x : x;
-              currentY = type === 'l' ? currentY + y : y;
-              points.push({ x: currentX, y: currentY });
-            }
-          } else if (type === 'C' || type === 'c') {
-            for (let i = 0; i < nums.length; i += 6) {
-              const cp1x = nums[i], cp1y = nums[i+1];
-              const cp2x = nums[i+2], cp2y = nums[i+3];
-              const x = nums[i+4], y = nums[i+5];
-              const endX = type === 'c' ? currentX + x : x;
-              const endY = type === 'c' ? currentY + y : y;
-              
-              // 20 segments for smooth curves
-              for (let t = 0.05; t <= 1; t += 0.05) {
-                const mt = 1 - t;
-                const px = Math.pow(mt, 3) * currentX + 
-                          3 * Math.pow(mt, 2) * t * (type === 'c' ? currentX + cp1x : cp1x) +
-                          3 * mt * Math.pow(t, 2) * (type === 'c' ? currentX + cp2x : cp2x) +
-                          Math.pow(t, 3) * endX;
-                const py = Math.pow(mt, 3) * currentY +
-                          3 * Math.pow(mt, 2) * t * (type === 'c' ? currentY + cp1y : cp1y) +
-                          3 * mt * Math.pow(t, 2) * (type === 'c' ? currentY + cp2y : cp2y) +
-                          Math.pow(t, 3) * endY;
-                points.push({ x: px, y: py });
-              }
-              currentX = endX;
-              currentY = endY;
-            }
-          } else if (type === 'Q' || type === 'q') {
-            for (let i = 0; i < nums.length; i += 4) {
-              const cpx = nums[i], cpy = nums[i+1];
-              const x = nums[i+2], y = nums[i+3];
-              const endX = type === 'q' ? currentX + x : x;
-              const endY = type === 'q' ? currentY + y : y;
-              
-              for (let t = 0.05; t <= 1; t += 0.05) {
-                const mt = 1 - t;
-                const px = Math.pow(mt, 2) * currentX +
-                          2 * mt * t * (type === 'q' ? currentX + cpx : cpx) +
-                          Math.pow(t, 2) * endX;
-                const py = Math.pow(mt, 2) * currentY +
-                          2 * mt * t * (type === 'q' ? currentY + cpy : cpy) +
-                          Math.pow(t, 2) * endY;
-                points.push({ x: px, y: py });
-              }
-              currentX = endX;
-              currentY = endY;
-            }
-          } else if (type === 'A' || type === 'a') {
-            for (let i = 0; i < nums.length; i += 7) {
-              const rx = nums[i], ry = nums[i+1];
-              const x = nums[i+5], y = nums[i+6];
-              const endX = type === 'a' ? currentX + x : x;
-              const endY = type === 'a' ? currentY + y : y;
-              
-              const dx = endX - currentX;
-              const dy = endY - currentY;
-              const dist = Math.sqrt(dx*dx + dy*dy);
-              const perpX = -dy / dist * rx * 0.5;
-              const perpY = dx / dist * ry * 0.5;
-              
-              const cp1x = currentX + dx/3 + perpX;
-              const cp1y = currentY + dy/3 + perpY;
-              const cp2x = currentX + 2*dx/3 + perpX;
-              const cp2y = currentY + 2*dy/3 + perpY;
-              
-              for (let t = 0.05; t <= 1; t += 0.05) {
-                const mt = 1 - t;
-                const px = Math.pow(mt, 3) * currentX + 
-                          3 * Math.pow(mt, 2) * t * cp1x +
-                          3 * mt * Math.pow(t, 2) * cp2x +
-                          Math.pow(t, 3) * endX;
-                const py = Math.pow(mt, 3) * currentY +
-                          3 * Math.pow(mt, 2) * t * cp1y +
-                          3 * mt * Math.pow(t, 2) * cp2y +
-                          Math.pow(t, 3) * endY;
-                points.push({ x: px, y: py });
-              }
-              currentX = endX;
-              currentY = endY;
-            }
-          } else if (type === 'Z' || type === 'z') {
-            // Close path - no action needed
-          }
-        });
-        
-        return points;
-      }
-
-      // ----- Complete A-Z, a-z, 0-9 SVG paths (KanjiVG style) -----
+      // ----- SVG Path data for letters (KanjiVG style) -----
       const letterSVG = {
         // UPPERCASE A-Z
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
@@ -354,53 +245,12 @@
         'X': ['M20,15 C35,40 45,65 60,85', 'M60,15 C45,40 35,65 20,85'],
         'Y': ['M10,15 C25,40 35,55 40,60', 'M40,60 C45,55 55,40 70,15', 'M40,60 L40,85'],
         'Z': ['M10,15 L70,15', 'M70,15 C50,40 30,65 10,85', 'M10,85 L70,85'],
-        
-        // LOWERCASE a-z
-        'a': ['M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60', 'M65,25 L65,55', 'M65,55 C60,70 50,75 40,70'],
-        'b': ['M20,15 L20,75', 'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
-        'c': ['M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'],
-        'd': ['M60,15 L60,75', 'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'],
-        'e': ['M60,25 C45,15 25,15 15,25 C5,40 10,55 25,60 C40,65 60,60 65,50', 'M20,40 L50,40'],
-        'f': ['M30,15 L45,15', 'M40,15 L40,75', 'M20,30 C35,30 50,30 55,30'],
-        'g': ['M55,25 C40,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,65 60,55', 'M60,45 C60,60 60,75 50,85 C35,90 20,85 15,70', 'M15,70 C10,60 10,55 15,50'],
-        'h': ['M20,15 L20,75', 'M20,30 C35,25 50,25 60,35 C70,50 60,65 45,65'],
-        'i': ['M30,15 L30,23', 'M30,33 C30,45 30,60 30,65', 'M30,33 C25,40 20,45 20,50'],
-        'j': ['M45,15 L45,23', 'M45,33 C45,50 45,65 40,75 C35,85 20,85 15,75', 'M45,33 C40,40 35,45 35,50'],
-        'k': ['M20,15 L20,75', 'M20,35 C30,30 40,20 50,15', 'M20,35 C30,40 40,50 50,65'],
-        'l': ['M20,15 L20,75', 'M20,75 C25,80 30,80 30,80'],
-        'm': ['M15,75 L15,25', 'M15,25 C25,35 30,45 35,45', 'M35,45 C40,45 45,35 55,25', 'M55,25 L55,75'],
-        'n': ['M20,75 L20,25', 'M20,25 C35,25 45,25 55,35 C65,45 60,65 45,65'],
-        'o': ['M35,20 C20,20 10,35 15,55 C20,70 35,75 50,70 C65,65 70,45 60,30 C50,20 40,20 35,20'],
-        'p': ['M20,20 L20,85', 'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
-        'q': ['M60,20 L60,85', 'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'],
-        'r': ['M20,20 L20,65', 'M20,25 C30,20 45,20 60,30'],
-        's': ['M60,30 C45,20 25,20 15,25 C5,35 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80'],
-        't': ['M20,15 C30,15 40,15 45,15', 'M30,15 L30,70', 'M30,35 C40,35 50,35 55,35'],
-        'u': ['M20,20 L20,55 C20,65 25,75 40,75 C55,75 65,65 65,50', 'M65,20 L65,50'],
-        'v': ['M15,20 C25,45 30,60 35,70 C40,60 45,45 55,20'],
-        'w': ['M10,20 C20,40 25,55 30,65 C35,55 40,40 45,45 C50,40 55,55 60,65 C65,55 70,40 80,20'],
-        'x': ['M15,20 C30,40 40,60 55,70', 'M55,20 C40,40 30,60 15,70'],
-        'y': ['M15,20 C25,40 35,55 40,60', 'M40,60 C45,55 55,40 65,20', 'M40,60 C40,70 40,80 35,85 C30,90 20,90 15,85'],
-        'z': ['M15,20 L65,20', 'M65,20 C45,40 30,60 15,75', 'M15,75 L65,75'],
-        
-        // NUMBERS 0-9
-        '0': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'],
-        '1': ['M25,30 L40,15 L40,85'],
-        '2': ['M15,25 C35,25 55,25 60,25 C40,40 25,55 15,70 C10,80 20,85 40,85 C55,85 65,80 70,75'],
-        '3': ['M15,25 C40,25 60,25 65,35 C70,45 60,50 40,50 C60,50 65,55 70,65 C75,75 60,85 35,85 C15,85 10,80 10,75'],
-        '4': ['M40,15 L40,60 C40,70 50,70 60,70', 'M20,40 C35,40 50,40 60,40', 'M40,60 L40,85'],
-        '5': ['M50,20 C35,20 20,20 15,20 C15,35 15,45 15,50 C35,50 50,50 60,50 C65,65 60,80 40,85 C20,85 15,80 10,75'],
-        '6': ['M60,20 C40,20 20,20 15,30 C10,45 15,60 30,65 C50,70 65,60 70,50 C75,40 65,30 50,30', 'M30,65 C25,75 20,80 25,85'],
-        '7': ['M15,20 C35,20 55,20 70,20 C60,40 50,60 40,85'],
-        '8': ['M40,20 C20,20 10,30 15,45 C20,55 35,60 45,60 C60,60 70,50 70,40 C70,25 55,20 40,20', 'M40,40 C25,40 15,50 20,65 C25,75 40,80 55,75 C70,70 75,55 65,45 C55,40 45,40 40,40'],
-        '9': ['M20,65 C40,65 60,65 65,55 C70,45 65,30 50,25 C35,20 20,25 15,35 C10,45 15,55 30,60', 'M50,25 C55,15 60,10 65,10'],
         ' ': []
       };
 
-      // ----- Generate strokes (matches kanjivganimate) -----
-      function generateStrokes(text) {
-        if (!text) return [];
-        const result = [];
+      // ----- Generate SVG from text -----
+      function generateSVG(text) {
+        if (!text) return '';
         const words = text.split(' ');
         let xOffset = 30;
         const yBase = 55;
@@ -417,140 +267,149 @@
         let scaleFactor = 1;
         if (totalWidth > maxWidth) scaleFactor = maxWidth / totalWidth;
 
+        let paths = [];
         let strokeCounter = 0;
 
         for (let wIdx = 0; wIdx < words.length; wIdx++) {
           const word = words[wIdx];
           for (let chIdx = 0; chIdx < word.length; chIdx++) {
             const ch = word[chIdx];
-            const paths = letterSVG[ch] || letterSVG['A'];
+            const strokePaths = letterSVG[ch] || letterSVG['A'];
             
-            for (let sIdx = 0; sIdx < paths.length; sIdx++) {
-              const pathData = paths[sIdx];
-              let points = parseSVGPath(pathData);
-              
-              // Scale and position
-              const scaled = points.map((p) => ({
-                x: p.x * scaleFactor * 0.8 + xOffset + 20,
-                y: p.y * scaleFactor * 0.8 + yBase + 20
-              }));
-              
-              if (scaled.length > 0) {
-                result.push({
-                  points: scaled,
-                  strokeNum: ++strokeCounter
+            for (let sIdx = 0; sIdx < strokePaths.length; sIdx++) {
+              const pathData = strokePaths[sIdx];
+              // Transform the path data with translation and scaling
+              const transformed = pathData.replace(/([MLCQA])([^MLCQA]*)/g, (match, cmd, coords) => {
+                const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
+                const scaled = nums.map((n, i) => {
+                  const val = n * scaleFactor * 0.8;
+                  if (i % 2 === 0) {
+                    return val + xOffset + 20;
+                  } else {
+                    return val + yBase + 20;
+                  }
                 });
-              }
+                return cmd + scaled.join(' ');
+              });
+              paths.push(transformed);
+              strokeCounter++;
             }
             xOffset += charWidth * scaleFactor * 0.8 + 8;
           }
           if (wIdx < words.length - 1) xOffset += gap * scaleFactor;
         }
-        return result;
+
+        // Build SVG string with proper structure for kanjivganimate
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" class="kanjiVG" style="width:100%;height:100%;display:block;">
+          <g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">
+            ${paths.map((d, i) => `<path d="${d}" data-stroke="${i+1}" />`).join('')}
+          </g>
+        </svg>`;
       }
 
-      // ----- Drawing (matches kanjivganimate) -----
-      function drawStroke(stroke, progress = 1, showNumber = true) {
-        if (!stroke || stroke.points.length < 2) return;
-        const pts = stroke.points;
-        const total = pts.length;
-        const drawCount = Math.max(1, Math.floor(progress * total));
-
-        // Main stroke
-        ctx.save();
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 4.5;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.beginPath();
-        ctx.moveTo(pts[0].x, pts[0].y);
-        for (let i = 1; i < drawCount && i < total; i++) {
-          ctx.lineTo(pts[i].x, pts[i].y);
+      // ----- Render using KanjiVgAnimate library -----
+      function renderWithKanjiVgAnimate(text) {
+        // Clear previous animation
+        if (animator) {
+          // Remove old SVG
+          const oldSVG = wrapper.querySelector('svg');
+          if (oldSVG) oldSVG.remove();
+          animator = null;
         }
-        ctx.stroke();
-        ctx.restore();
+        isAnimating = false;
 
-        // Start marker
-        if (progress > 0.01) {
-          ctx.save();
-          ctx.fillStyle = '#22c55e';
-          ctx.shadowColor = 'rgba(34,197,94,0.3)';
-          ctx.shadowBlur = 6;
-          ctx.beginPath();
-          ctx.arc(pts[0].x, pts[0].y, 5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
+        const rawText = text || document.getElementById('wordInput').value || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const svgString = generateSVG(rawText);
+        
+        if (!svgString) {
+          ctx.clearRect(0, 0, W, H);
+          document.getElementById('statusLabel').textContent = '⏺ No strokes';
+          return;
         }
 
-        // End marker
-        if (progress >= 0.99) {
-          ctx.save();
-          ctx.fillStyle = '#ef4444';
-          ctx.shadowColor = 'rgba(239,68,68,0.3)';
-          ctx.shadowBlur = 6;
-          ctx.beginPath();
-          ctx.arc(pts[pts.length-1].x, pts[pts.length-1].y, 5, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.restore();
-        }
+        // Insert SVG into the wrapper
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = svgString;
+        const svgElement = tempDiv.querySelector('svg');
+        svgElement.style.width = '100%';
+        svgElement.style.height = '100%';
+        svgElement.style.display = 'block';
+        
+        // Clear wrapper and add SVG
+        wrapper.innerHTML = '';
+        wrapper.appendChild(svgElement);
 
-        // Stroke number
-        if (showNumber && progress >= 0.3) {
-          const midIdx = Math.floor(total / 2);
-          const mid = pts[midIdx] || pts[0];
-          ctx.save();
-          const num = stroke.strokeNum || 0;
-          const text = num.toString();
-          ctx.font = 'bold 14px Inter, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          const metrics = ctx.measureText(text);
-          const pad = 6;
-          const rectW = metrics.width + pad * 2;
-          const rectH = 24;
-          const x = mid.x - rectW/2;
-          const y = mid.y - rectH/2 - 2;
-          ctx.shadowColor = 'rgba(0,0,0,0.15)';
-          ctx.shadowBlur = 8;
-          ctx.fillStyle = 'rgba(255,255,255,0.92)';
-          ctx.beginPath();
-          ctx.roundRect(x, y, rectW, rectH, 12);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.fillStyle = '#0f172a';
-          ctx.font = 'bold 13px Inter, sans-serif';
-          ctx.fillText(text, mid.x, mid.y + 1);
-          ctx.restore();
-        }
+        // Also keep canvas for background
+        wrapper.appendChild(canvas);
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.opacity = '0'; // Hide canvas, SVG handles rendering
 
-        // Direction arrow
-        if (progress >= 0.6 && drawCount >= 3) {
-          const idx = Math.min(Math.floor(total * 0.6), total - 1);
-          const p1 = pts[Math.max(0, idx - 1)];
-          const p2 = pts[idx];
-          const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
-          const size = 9;
-          ctx.save();
-          ctx.fillStyle = '#1e293b';
-          ctx.shadowColor = 'rgba(0,0,0,0.1)';
-          ctx.shadowBlur = 4;
-          ctx.translate(p2.x, p2.y);
-          ctx.rotate(angle);
-          ctx.beginPath();
-          ctx.moveTo(0, 0);
-          ctx.lineTo(-size, -size/2);
-          ctx.lineTo(-size, size/2);
-          ctx.closePath();
-          ctx.fill();
-          ctx.restore();
+        // Initialize KanjiVgAnimate on the SVG
+        try {
+          animator = new KanjivgAnimate('.kanjiVG', 500);
+          isAnimating = true;
+          document.getElementById('statusLabel').textContent = '▶ Animating...';
+          
+          // Monitor animation completion
+          const checkComplete = setInterval(() => {
+            if (!isAnimating) {
+              clearInterval(checkComplete);
+              return;
+            }
+            // Check if all strokes are complete by looking at SVG paths
+            const paths = svgElement.querySelectorAll('path');
+            let allComplete = true;
+            paths.forEach(path => {
+              const dashoffset = path.style.strokeDashoffset;
+              if (dashoffset && parseFloat(dashoffset) > 1) {
+                allComplete = false;
+              }
+            });
+            if (allComplete && paths.length > 0) {
+              isAnimating = false;
+              document.getElementById('statusLabel').textContent = '✅ Complete · all strokes traced';
+              clearInterval(checkComplete);
+            }
+          }, 100);
+        } catch (e) {
+          console.warn('KanjiVgAnimate error:', e);
+          document.getElementById('statusLabel').textContent = '⚠️ Animation error';
+          // Fallback: just show the SVG
+          isAnimating = false;
         }
       }
 
-      // ----- Main draw (matches kanjivganimate) -----
-      function drawAll(progress = 1) {
+      // ----- Public functions -----
+      function startTrace(text) {
+        renderWithKanjiVgAnimate(text);
+      }
+
+      function clearTrace() {
+        if (animator) {
+          const svg = wrapper.querySelector('svg');
+          if (svg) svg.remove();
+          animator = null;
+        }
+        isAnimating = false;
         ctx.clearRect(0, 0, W, H);
+        canvas.style.opacity = '1';
+        canvas.style.position = 'relative';
+        document.getElementById('statusLabel').textContent = '⏺ Cleared';
+        // Redraw grid on canvas
+        drawGrid();
+      }
 
-        // Grid
+      function resetTrace() {
+        const input = document.getElementById('wordInput');
+        startTrace(input.value);
+      }
+
+      function drawGrid() {
         ctx.save();
         ctx.strokeStyle = '#f1f5f9';
         ctx.lineWidth = 0.5;
@@ -567,100 +426,6 @@
           ctx.stroke();
         }
         ctx.restore();
-
-        if (!strokeData.length) return;
-
-        const total = strokeData.length;
-        const complete = Math.floor(progress * total);
-
-        for (let i = 0; i < total; i++) {
-          const stroke = strokeData[i];
-          if (i < complete) {
-            drawStroke(stroke, 1, true);
-          } else if (i === complete) {
-            const partial = (progress * total) - i;
-            drawStroke(stroke, partial, false);
-          }
-          // No ghost preview - matches kanjivganimate
-        }
-      }
-
-      // ----- Animation loop (EXACT kanjivganimate) -----
-      function animate(timestamp) {
-        if (!isAnimating) return;
-
-        if (!startTime) {
-          startTime = timestamp;
-        }
-
-        elapsed = timestamp - startTime;
-        
-        // Calculate progress based on time
-        const totalStrokes = strokeData.length;
-        const totalDuration = totalStrokes * STROKE_DURATION;
-        const progress = Math.min(elapsed / totalDuration, 1);
-        
-        drawAll(progress);
-
-        if (progress < 1) {
-          const done = Math.floor(progress * totalStrokes);
-          const percent = Math.round(progress * 100);
-          document.getElementById('statusLabel').textContent = `⏳ ${percent}% · ${done}/${totalStrokes}`;
-          animationId = requestAnimationFrame(animate);
-        } else {
-          isAnimating = false;
-          document.getElementById('statusLabel').textContent = '✅ Complete · all strokes traced';
-          animationId = null;
-          startTime = 0;
-        }
-      }
-
-      // ----- Public functions -----
-      function startTrace(text) {
-        if (animationId) { 
-          cancelAnimationFrame(animationId); 
-          animationId = null; 
-        }
-        isAnimating = false;
-        startTime = 0;
-        
-        const rawText = text || document.getElementById('wordInput').value || 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        strokeData = generateStrokes(rawText);
-        
-        if (!strokeData.length) {
-          ctx.clearRect(0, 0, W, H);
-          document.getElementById('statusLabel').textContent = '⏺ No strokes';
-          return;
-        }
-        
-        isAnimating = true;
-        document.getElementById('statusLabel').textContent = '▶ Animating...';
-        animationId = requestAnimationFrame(animate);
-      }
-
-      function clearTrace() {
-        if (animationId) { 
-          cancelAnimationFrame(animationId); 
-          animationId = null; 
-        }
-        isAnimating = false;
-        startTime = 0;
-        strokeData = [];
-        ctx.clearRect(0, 0, W, H);
-        document.getElementById('statusLabel').textContent = '⏺ Cleared';
-      }
-
-      function resetTrace() {
-        if (strokeData.length) {
-          if (animationId) { 
-            cancelAnimationFrame(animationId); 
-            animationId = null; 
-          }
-          startTime = 0;
-          isAnimating = true;
-          document.getElementById('statusLabel').textContent = '▶ Replaying...';
-          animationId = requestAnimationFrame(animate);
-        }
       }
 
       // ----- UI -----
@@ -671,28 +436,15 @@
         if (e.key === 'Enter') { e.preventDefault(); startTrace(e.target.value); }
       });
 
-      // roundRect polyfill
-      if (!CanvasRenderingContext2D.prototype.roundRect) {
-        CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
-          if (w < 2 * r) r = w / 2;
-          if (h < 2 * r) r = h / 2;
-          this.moveTo(x + r, y);
-          this.lineTo(x + w - r, y);
-          this.quadraticCurveTo(x + w, y, x + w, y + r);
-          this.lineTo(x + w, y + h - r);
-          this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-          this.lineTo(x + r, y + h);
-          this.quadraticCurveTo(x, y + h, x, y + h - r);
-          this.lineTo(x, y + r);
-          this.quadraticCurveTo(x, y, x + r, y);
-          return this;
-        };
-      }
-
       // Initial load
       window.addEventListener('load', () => {
         document.getElementById('wordInput').value = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        startTrace('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+        // Draw initial grid
+        drawGrid();
+        // Start trace after a small delay to ensure DOM is ready
+        setTimeout(() => {
+          startTrace('ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+        }, 100);
       });
     })();
   </script>
