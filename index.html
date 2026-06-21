@@ -236,7 +236,7 @@
         'P': ['M20,15 L20,85', 'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65'],
         'Q': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15', 'M60,65 L75,80'],
         'R': ['M20,15 L20,85', 'M20,25 C40,25 60,25 65,45 C70,60 60,65 40,65 C25,65 20,65 20,65', 'M45,65 L65,85'],
-        'S': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'],
+        'S': ['M65,25 C55,15 35,15 25,20 C15,30 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80 C15,75 10,65 10,60'],
         'T': ['M10,15 L70,15', 'M40,15 L40,85'],
         'U': ['M20,15 L20,60 C20,75 30,85 45,85 C60,85 70,75 70,60 L70,15'],
         'V': ['M10,15 C25,50 35,75 40,85 C45,75 55,50 70,15'],
@@ -296,7 +296,7 @@
         const maxWidth = svgWidth - (padding * 2);
         const lineHeight = 90;
         const yBase = 55;
-        const charSpacing = 6;
+        const charSpacing = 8; // Increased spacing between characters
 
         // Split into characters with widths
         const chars = [];
@@ -314,7 +314,9 @@
           const charData = chars[i];
           const charWidth_ = charData.width;
           
-          const testWidth = currentWidth + charWidth_ + (currentLine.length > 0 ? charSpacing : 0);
+          // Add spacing between characters on same line
+          const spacing = currentLine.length > 0 ? charSpacing : 0;
+          const testWidth = currentWidth + charWidth_ + spacing;
           
           if (testWidth <= maxWidth) {
             currentLine.push(charData);
@@ -366,6 +368,7 @@
                 strokeNum: ++strokeCounter
               });
             }
+            // Add spacing after each character
             xOffset += charData.width + charSpacing;
           }
         }
