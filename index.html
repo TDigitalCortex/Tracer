@@ -208,7 +208,7 @@
     </div>
   </div>
 
-  <!-- Load KanjiVgAnimate library from CDN -->
+  <!-- Load KanjiVgAnimate library -->
   <script src="https://cdn.jsdelivr.net/npm/kanjivganimate@0.2.1/dist/kanjivganimate.min.js"></script>
 
   <script>
@@ -220,9 +220,9 @@
       const inputField = document.getElementById('wordInput');
 
       // ----- Letter stroke data (KanjiVG format) -----
-      // All letters use the same structure - just paths with data-stroke
+      // Simple paths with data-stroke attributes - library handles the rest
       const letterStrokes = {
-        // UPPERCASE
+        // UPPERCASE A-Z
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
         'B': ['M20,15 L20,85', 'M20,15 C35,15 55,15 60,30 C65,45 55,55 40,55 C55,55 60,60 60,70 C60,80 50,85 35,85 C25,85 20,85 20,85'],
         'C': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'],
@@ -250,7 +250,7 @@
         'Y': ['M10,15 L40,60', 'M40,60 L70,15', 'M40,60 L40,85'],
         'Z': ['M10,15 L70,15', 'M70,15 L10,85', 'M10,85 L70,85'],
         
-        // LOWERCASE
+        // LOWERCASE a-z
         'a': ['M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60', 'M65,25 L65,55', 'M65,55 C60,70 50,75 40,70'],
         'b': ['M20,15 L20,75', 'M20,25 C35,20 50,20 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
         'c': ['M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'],
@@ -292,7 +292,7 @@
         ' ': []
       };
 
-      // ----- Generate SVG -----
+      // ----- Generate SVG with kanjiVG class -----
       function generateSVG(text) {
         if (!text) return null;
         
@@ -302,7 +302,6 @@
         const maxWidth = svgWidth - (padding * 2);
         const lineHeight = 90;
         const yBase = 55;
-        
         const charWidth = 50;
         const charSpacing = 14;
 
@@ -377,7 +376,7 @@
 
         const finalHeight = Math.max(400, lines.length * lineHeight + 100 + padding);
 
-        // Build SVG with kanjiVG class - the library needs this
+        // Build SVG with kanjiVG class - library needs this
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" class="kanjiVG" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
         svg += `<rect width="100%" height="100%" fill="white" rx="8" />`;
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
@@ -394,7 +393,6 @@
       let currentAnimator = null;
 
       function renderAndAnimate(text) {
-        // Clear previous
         container.innerHTML = '';
         if (currentAnimator) {
           currentAnimator = null;
@@ -420,30 +418,24 @@
         svgElement.style.background = 'white';
         svgElement.style.borderRadius = '8px';
 
-        // Initialize KanjiVgAnimate - THIS IS THE LIBRARY
-        // The library handles: dotted lines, stroke numbers, animation
+        // Use the library - it handles everything
         try {
           currentAnimator = new KanjivgAnimate('.kanjiVG', 500);
           statusLabel.textContent = '▶ Animating...';
           
-          // Monitor completion
           let checkCount = 0;
           const checkInterval = setInterval(() => {
             checkCount++;
-            
             const paths = svgElement.querySelectorAll('path');
-            let allComplete = true;
             let completed = 0;
             paths.forEach(p => {
               const offset = p.style.strokeDashoffset;
               if (offset && parseFloat(offset) <= 1) {
                 completed++;
-              } else {
-                allComplete = false;
               }
             });
             
-            if (allComplete && paths.length > 0) {
+            if (completed === paths.length && paths.length > 0) {
               statusLabel.textContent = `✅ Complete · ${paths.length} strokes`;
               clearInterval(checkInterval);
             } else if (checkCount > 300) {
@@ -492,7 +484,6 @@
         }
       });
 
-      // ----- Handle resize -----
       let resizeTimeout;
       function handleResize() {
         clearTimeout(resizeTimeout);
@@ -504,7 +495,6 @@
 
       window.addEventListener('resize', handleResize);
 
-      // ----- Initial load -----
       window.addEventListener('load', () => {
         inputField.value = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
         setTimeout(startTrace, 100);
