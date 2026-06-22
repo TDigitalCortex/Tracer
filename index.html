@@ -220,6 +220,7 @@
       const inputField = document.getElementById('wordInput');
 
       // ----- Complete letter stroke data (KanjiVG format) -----
+      // Same structure for ALL letters - A through Z
       const letterStrokes = {
         // UPPERCASE A-Z
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
@@ -391,7 +392,6 @@
 
       // ----- Render using KanjiVgAnimate library -----
       let currentAnimator = null;
-      let animating = false;
 
       function renderAndAnimate(text) {
         // Clear previous
@@ -399,7 +399,6 @@
         if (currentAnimator) {
           currentAnimator = null;
         }
-        animating = false;
 
         const svgString = generateSVG(text);
         if (!svgString) {
@@ -421,22 +420,16 @@
         svgElement.style.background = 'white';
         svgElement.style.borderRadius = '8px';
 
-        // The library automatically adds dotted lines and stroke numbers
-        // when initialized with the .kanjiVG selector
+        // Initialize KanjiVgAnimate - uses data-stroke attributes for numbering
         try {
+          // The library automatically adds dotted lines and stroke numbers
           currentAnimator = new KanjivgAnimate('.kanjiVG', 500);
-          animating = true;
           statusLabel.textContent = '▶ Animating...';
           
           // Monitor completion
           let checkCount = 0;
           const checkInterval = setInterval(() => {
             checkCount++;
-            
-            if (!animating) {
-              clearInterval(checkInterval);
-              return;
-            }
             
             const paths = svgElement.querySelectorAll('path');
             let allComplete = true;
@@ -451,11 +444,9 @@
             });
             
             if (allComplete && paths.length > 0) {
-              animating = false;
               statusLabel.textContent = `✅ Complete · ${paths.length} strokes`;
               clearInterval(checkInterval);
             } else if (checkCount > 300) {
-              animating = false;
               statusLabel.textContent = `✅ Complete (${completed}/${paths.length})`;
               clearInterval(checkInterval);
             } else if (checkCount % 10 === 0 && paths.length > 0) {
@@ -467,6 +458,7 @@
         } catch (e) {
           console.warn('KanjiVgAnimate error:', e);
           statusLabel.textContent = '⚠️ Using fallback';
+          // Fallback: manually animate with CSS
           fallbackAnimate(svgElement);
         }
       }
@@ -477,15 +469,17 @@
         const totalStrokes = paths.length;
         let completed = 0;
 
-        // Add dotted preview for all strokes
-        paths.forEach((path, index) => {
+        // Set up each path
+        paths.forEach((path) => {
           try {
             const length = path.getTotalLength ? path.getTotalLength() : 100;
             path.dataset.length = length;
             path.style.strokeDasharray = length;
             path.style.strokeDashoffset = length;
           } catch(e) {
-            // Skip
+            path.dataset.length = 100;
+            path.style.strokeDasharray = 100;
+            path.style.strokeDashoffset = 100;
           }
         });
 
@@ -524,7 +518,6 @@
         if (currentAnimator) {
           currentAnimator = null;
         }
-        animating = false;
         statusLabel.textContent = '⏺ Cleared';
         container.innerHTML = '<div style="color:#94a3b8;padding:2rem;text-align:center;">Enter text and click Trace</div>';
       }
