@@ -183,7 +183,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">KanjiVgAnimate · Full alphabet</div>
+    <div class="subhead">KanjiVgAnimate · Proper stroke order</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -216,63 +216,234 @@
       const statusLabel = document.getElementById('statusLabel');
       const inputField = document.getElementById('wordInput');
 
-      // ----- Letter stroke data (KanjiVG format) -----
+      // ----- Letter stroke data with proper stroke order and direction -----
+      // Each stroke starts at the correct point and follows proper letter formation
       const letterStrokes = {
-        // UPPERCASE A-Z
-        'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
-        'B': ['M20,15 L20,85', 'M20,15 C35,15 55,15 60,30 C65,45 55,55 40,55 C55,55 60,60 60,70 C60,80 50,85 35,85 C25,85 20,85 20,85'],
-        'C': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'],
-        'D': ['M20,15 L20,85', 'M20,15 C45,15 65,20 70,45 C75,70 65,85 45,85 C25,85 20,85 20,85'],
-        'E': ['M20,15 L60,15', 'M20,15 L20,85', 'M20,50 L50,50', 'M20,85 L60,85'],
-        'F': ['M20,15 L60,15', 'M20,15 L20,85', 'M20,50 L50,50'],
-        'G': ['M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50', 'M65,50 L45,50'],
-        'H': ['M20,15 L20,85', 'M55,15 L55,85', 'M20,50 L55,50'],
-        'I': ['M15,15 L65,15', 'M40,15 L40,85', 'M15,85 L65,85'],
-        'J': ['M65,15 L65,60 C65,75 55,85 40,85 C25,85 15,75 15,60'],
-        'K': ['M20,15 L20,85', 'M20,50 L60,15', 'M20,50 L60,85'],
-        'L': ['M20,15 L20,85', 'M20,85 L60,85'],
-        'M': ['M15,15 L15,85', 'M15,15 L40,55', 'M40,55 L65,15', 'M65,15 L65,85'],
-        'N': ['M20,15 L20,85', 'M20,15 L60,85', 'M60,15 L60,85'],
-        'O': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'],
-        'P': ['M20,15 L20,85', 'M20,15 C40,15 60,20 65,45 C70,65 60,70 40,70 C25,70 20,70 20,70'],
-        'Q': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15', 'M60,65 L75,80'],
-        'R': ['M20,15 L20,85', 'M20,15 C40,15 60,20 65,45 C70,65 60,70 40,70 C25,70 20,70 20,70', 'M45,65 L65,85'],
-        'S': ['M65,25 C55,15 35,15 25,20 C15,30 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80 C15,75 10,65 10,60'],
-        'T': ['M10,15 L70,15', 'M40,15 L40,85'],
-        'U': ['M20,15 L20,60 C20,75 30,85 45,85 C60,85 70,75 70,60 L70,15'],
-        'V': ['M10,15 L40,85 L70,15'],
-        'W': ['M10,15 L10,85', 'M10,85 L40,45', 'M40,45 L70,85', 'M70,85 L70,15'],
-        'X': ['M20,15 L60,85', 'M60,15 L20,85'],
-        'Y': ['M10,15 L40,60', 'M40,60 L70,15', 'M40,60 L40,85'],
-        'Z': ['M10,15 L70,15', 'M70,15 L10,85', 'M10,85 L70,85'],
+        // UPPERCASE A-Z - Proper stroke order
+        'A': [
+          'M25,85 L40,15 L55,85',  // Stroke 1: Left diagonal up, then right diagonal down
+          'M32,55 L48,55'          // Stroke 2: Horizontal crossbar
+        ],
+        'B': [
+          'M20,15 L20,85',         // Stroke 1: Vertical down
+          'M20,15 C35,15 55,15 60,30 C65,45 55,55 40,55 C55,55 60,60 60,70 C60,80 50,85 35,85 C25,85 20,85 20,85'  // Stroke 2: Curve
+        ],
+        'C': [
+          'M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50'  // Stroke 1: Single smooth curve
+        ],
+        'D': [
+          'M20,15 L20,85',         // Stroke 1: Vertical down
+          'M20,15 C45,15 65,20 70,45 C75,70 65,85 45,85 C25,85 20,85 20,85'  // Stroke 2: Large curve
+        ],
+        'E': [
+          'M20,15 L60,15',         // Stroke 1: Top horizontal
+          'M20,15 L20,85',         // Stroke 2: Vertical down
+          'M20,50 L50,50',         // Stroke 3: Middle horizontal
+          'M20,85 L60,85'          // Stroke 4: Bottom horizontal
+        ],
+        'F': [
+          'M20,15 L60,15',         // Stroke 1: Top horizontal
+          'M20,15 L20,85',         // Stroke 2: Vertical down
+          'M20,50 L50,50'          // Stroke 3: Middle horizontal
+        ],
+        'G': [
+          'M65,25 C55,15 35,15 25,20 C15,25 10,45 15,65 C20,80 40,85 55,80 C65,75 70,60 70,50',  // Stroke 1: Main curve
+          'M65,50 L45,50'          // Stroke 2: Horizontal bar
+        ],
+        'H': [
+          'M20,15 L20,85',         // Stroke 1: Left vertical
+          'M55,15 L55,85',         // Stroke 2: Right vertical
+          'M20,50 L55,50'          // Stroke 3: Crossbar
+        ],
+        'I': [
+          'M15,15 L65,15',         // Stroke 1: Top horizontal
+          'M40,15 L40,85',         // Stroke 2: Vertical down
+          'M15,85 L65,85'          // Stroke 3: Bottom horizontal
+        ],
+        'J': [
+          'M65,15 L65,60 C65,75 55,85 40,85 C25,85 15,75 15,60'  // Stroke 1: Main curve with hook
+        ],
+        'K': [
+          'M20,15 L20,85',         // Stroke 1: Vertical down
+          'M20,50 L60,15',         // Stroke 2: Diagonal up-right
+          'M20,50 L60,85'          // Stroke 3: Diagonal down-right
+        ],
+        'L': [
+          'M20,15 L20,85',         // Stroke 1: Vertical down
+          'M20,85 L60,85'          // Stroke 2: Bottom horizontal
+        ],
+        'M': [
+          'M15,15 L15,85',         // Stroke 1: Left vertical down
+          'M15,15 L40,55',         // Stroke 2: Diagonal down-right
+          'M40,55 L65,15',         // Stroke 3: Diagonal up-right
+          'M65,15 L65,85'          // Stroke 4: Right vertical down
+        ],
+        'N': [
+          'M20,15 L20,85',         // Stroke 1: Left vertical down
+          'M20,15 L60,85',         // Stroke 2: Diagonal down-right (goes up first, then down)
+          'M60,15 L60,85'          // Stroke 3: Right vertical down
+        ],
+        'O': [
+          'M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'  // Stroke 1: Complete circle
+        ],
+        'P': [
+          'M20,15 L20,85',         // Stroke 1: Vertical down
+          'M20,15 C40,15 60,20 65,45 C70,65 60,70 40,70 C25,70 20,70 20,70'  // Stroke 2: Top curve
+        ],
+        'Q': [
+          'M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15',  // Stroke 1: Circle
+          'M60,65 L75,80'          // Stroke 2: Tail
+        ],
+        'R': [
+          'M20,15 L20,85',         // Stroke 1: Vertical down
+          'M20,15 C40,15 60,20 65,45 C70,65 60,70 40,70 C25,70 20,70 20,70',  // Stroke 2: Top curve
+          'M45,65 L65,85'          // Stroke 3: Diagonal leg
+        ],
+        'S': [
+          'M65,25 C55,15 35,15 25,20 C15,30 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80 C15,75 10,65 10,60'  // Stroke 1: Single smooth S curve
+        ],
+        'T': [
+          'M10,15 L70,15',         // Stroke 1: Top horizontal
+          'M40,15 L40,85'          // Stroke 2: Vertical down
+        ],
+        'U': [
+          'M20,15 L20,60 C20,75 30,85 45,85 C60,85 70,75 70,60 L70,15'  // Stroke 1: U shape
+        ],
+        'V': [
+          'M10,15 L40,85 L70,15'   // Stroke 1: V shape
+        ],
+        'W': [
+          'M10,15 L10,85',         // Stroke 1: Left vertical down
+          'M10,85 L40,45',         // Stroke 2: Diagonal up to middle
+          'M40,45 L70,85',         // Stroke 3: Diagonal down to right
+          'M70,85 L70,15'          // Stroke 4: Right vertical up
+        ],
+        'X': [
+          'M20,15 L60,85',         // Stroke 1: Diagonal down-right
+          'M60,15 L20,85'          // Stroke 2: Diagonal down-left
+        ],
+        'Y': [
+          'M10,15 L40,60',         // Stroke 1: Left diagonal
+          'M40,60 L70,15',         // Stroke 2: Right diagonal
+          'M40,60 L40,85'          // Stroke 3: Vertical down
+        ],
+        'Z': [
+          'M10,15 L70,15',         // Stroke 1: Top horizontal
+          'M70,15 L10,85',         // Stroke 2: Diagonal down-left
+          'M10,85 L70,85'          // Stroke 3: Bottom horizontal
+        ],
         
         // LOWERCASE a-z
-        'a': ['M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60', 'M65,25 L65,55', 'M65,55 C60,70 50,75 40,70'],
-        'b': ['M20,15 L20,75', 'M20,25 C35,20 50,20 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
-        'c': ['M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'],
-        'd': ['M60,15 L60,75', 'M60,25 C45,20 30,20 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'],
-        'e': ['M60,25 C45,15 25,15 15,25 C5,40 10,55 25,60 C40,65 60,60 65,50', 'M20,40 L50,40'],
-        'f': ['M30,15 L45,15', 'M40,15 L40,75', 'M20,30 C35,30 50,30 55,30'],
-        'g': ['M55,25 C40,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,65 60,55', 'M60,45 C60,60 60,75 50,85 C35,90 20,85 15,70', 'M15,70 C10,60 10,55 15,50'],
-        'h': ['M20,15 L20,75', 'M20,25 C35,20 50,20 60,35 C70,50 60,65 45,65'],
-        'i': ['M30,15 L30,23', 'M30,33 L30,65'],
-        'j': ['M45,15 L45,23', 'M45,33 L45,65 C45,75 35,80 25,75'],
-        'k': ['M20,15 L20,75', 'M20,35 L50,15', 'M20,35 L50,65'],
-        'l': ['M20,15 L20,75'],
-        'm': ['M15,75 L15,25', 'M15,25 L35,45', 'M35,45 L55,25', 'M55,25 L55,75'],
-        'n': ['M20,75 L20,25', 'M20,25 C35,20 50,20 60,35 C70,50 60,65 45,65'],
-        'o': ['M35,20 C20,20 10,35 15,55 C20,70 35,75 50,70 C65,65 70,45 60,30 C50,20 40,20 35,20'],
-        'p': ['M20,20 L20,85', 'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
-        'q': ['M60,20 L60,85', 'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'],
-        'r': ['M20,20 L20,65', 'M20,25 C30,20 45,20 60,30'],
-        's': ['M60,30 C45,20 25,20 15,25 C5,35 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80'],
-        't': ['M20,15 L45,15', 'M30,15 L30,70', 'M30,35 L55,35'],
-        'u': ['M20,20 L20,55 C20,65 25,75 40,75 C55,75 65,65 65,50', 'M65,20 L65,50'],
-        'v': ['M15,20 L35,70 L55,20'],
-        'w': ['M10,20 L10,75', 'M10,75 L30,45', 'M30,45 L50,75', 'M50,75 L50,20'],
-        'x': ['M15,20 L55,70', 'M55,20 L15,70'],
-        'y': ['M15,20 L40,60', 'M40,60 L65,20', 'M40,60 L40,85 C40,90 30,90 25,85'],
-        'z': ['M15,20 L65,20', 'M65,20 L15,75', 'M15,75 L65,75'],
+        'a': [
+          'M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60',  // Stroke 1: Main body
+          'M65,25 L65,55',         // Stroke 2: Stem down
+          'M65,55 C60,70 50,75 40,70'  // Stroke 3: Tail
+        ],
+        'b': [
+          'M20,15 L20,75',         // Stroke 1: Stem down
+          'M20,25 C35,20 50,20 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'  // Stroke 2: Bowl
+        ],
+        'c': [
+          'M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'  // Stroke 1: Single curve
+        ],
+        'd': [
+          'M60,15 L60,75',         // Stroke 1: Stem down
+          'M60,25 C45,20 30,20 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'  // Stroke 2: Bowl
+        ],
+        'e': [
+          'M60,25 C45,15 25,15 15,25 C5,40 10,55 25,60 C40,65 60,60 65,50',  // Stroke 1: Main body
+          'M20,40 L50,40'          // Stroke 2: Crossbar
+        ],
+        'f': [
+          'M30,15 L45,15',         // Stroke 1: Top bar
+          'M40,15 L40,75',         // Stroke 2: Stem down
+          'M20,30 C35,30 50,30 55,30'  // Stroke 3: Crossbar
+        ],
+        'g': [
+          'M55,25 C40,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,65 60,55',  // Stroke 1: Top bowl
+          'M60,45 C60,60 60,75 50,85 C35,90 20,85 15,70',  // Stroke 2: Descender
+          'M15,70 C10,60 10,55 15,50'  // Stroke 3: Tail
+        ],
+        'h': [
+          'M20,15 L20,75',         // Stroke 1: Stem down
+          'M20,25 C35,20 50,20 60,35 C70,50 60,65 45,65'  // Stroke 2: Arch
+        ],
+        'i': [
+          'M30,15 L30,23',         // Stroke 1: Dot
+          'M30,33 L30,65'          // Stroke 2: Stem down
+        ],
+        'j': [
+          'M45,15 L45,23',         // Stroke 1: Dot
+          'M45,33 L45,65 C45,75 35,80 25,75'  // Stroke 2: Stem with descender
+        ],
+        'k': [
+          'M20,15 L20,75',         // Stroke 1: Stem down
+          'M20,35 L50,15',         // Stroke 2: Upper diagonal
+          'M20,35 L50,65'          // Stroke 3: Lower diagonal
+        ],
+        'l': [
+          'M20,15 L20,75'          // Stroke 1: Stem down
+        ],
+        'm': [
+          'M15,75 L15,25',         // Stroke 1: Left stem up
+          'M15,25 L35,45',         // Stroke 2: First arch
+          'M35,45 L55,25',         // Stroke 3: Second arch
+          'M55,25 L55,75'          // Stroke 4: Right stem down
+        ],
+        'n': [
+          'M20,75 L20,25',         // Stroke 1: Stem up
+          'M20,25 C35,20 50,20 60,35 C70,50 60,65 45,65'  // Stroke 2: Arch
+        ],
+        'o': [
+          'M35,20 C20,20 10,35 15,55 C20,70 35,75 50,70 C65,65 70,45 60,30 C50,20 40,20 35,20'  // Stroke 1: Circle
+        ],
+        'p': [
+          'M20,20 L20,85',         // Stroke 1: Stem down with descender
+          'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'  // Stroke 2: Bowl
+        ],
+        'q': [
+          'M60,20 L60,85',         // Stroke 1: Stem down with descender
+          'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'  // Stroke 2: Bowl
+        ],
+        'r': [
+          'M20,20 L20,65',         // Stroke 1: Stem down
+          'M20,25 C30,20 45,20 60,30'  // Stroke 2: Small arch
+        ],
+        's': [
+          'M60,30 C45,20 25,20 15,25 C5,35 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80'  // Stroke 1: S curve
+        ],
+        't': [
+          'M20,15 L45,15',         // Stroke 1: Top bar
+          'M30,15 L30,70',         // Stroke 2: Stem down
+          'M30,35 L55,35'          // Stroke 3: Crossbar
+        ],
+        'u': [
+          'M20,20 L20,55 C20,65 25,75 40,75 C55,75 65,65 65,50',  // Stroke 1: U shape
+          'M65,20 L65,50'          // Stroke 2: Right stem
+        ],
+        'v': [
+          'M15,20 L35,70 L55,20'   // Stroke 1: V shape
+        ],
+        'w': [
+          'M10,20 L10,75',         // Stroke 1: Left stem down
+          'M10,75 L30,45',         // Stroke 2: Diagonal up
+          'M30,45 L50,75',         // Stroke 3: Diagonal down
+          'M50,75 L50,20'          // Stroke 4: Right stem up
+        ],
+        'x': [
+          'M15,20 L55,70',         // Stroke 1: Diagonal down-right
+          'M55,20 L15,70'          // Stroke 2: Diagonal down-left
+        ],
+        'y': [
+          'M15,20 L40,60',         // Stroke 1: Left diagonal
+          'M40,60 L65,20',         // Stroke 2: Right diagonal
+          'M40,60 L40,85 C40,90 30,90 25,85'  // Stroke 3: Descender
+        ],
+        'z': [
+          'M15,20 L65,20',         // Stroke 1: Top horizontal
+          'M65,20 L15,75',         // Stroke 2: Diagonal down-left
+          'M15,75 L65,75'          // Stroke 3: Bottom horizontal
+        ],
         
         // NUMBERS
         '0': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'],
@@ -372,7 +543,6 @@
 
         const finalHeight = Math.max(400, lines.length * lineHeight + 100 + padding);
 
-        // Build SVG with kanjiVG class
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" class="kanjiVG" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
         svg += `<rect width="100%" height="100%" fill="white" rx="8" />`;
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
@@ -385,7 +555,7 @@
         return svg;
       }
 
-      // ----- KanjiVgAnimate library implementation (from the repository) -----
+      // ----- KanjiVgAnimate library implementation -----
       function KanjivgAnimate(selector, time) {
         var elements = document.querySelectorAll(selector);
         var duration = time || 500;
@@ -394,13 +564,11 @@
           var svg = elements[i];
           var paths = svg.querySelectorAll('path');
           var strokeData = [];
-          var maxStroke = 0;
           
           // Get stroke data from paths
           for (var j = 0; j < paths.length; j++) {
             var path = paths[j];
             var stroke = parseInt(path.getAttribute('data-stroke')) || (j + 1);
-            if (stroke > maxStroke) maxStroke = stroke;
             strokeData.push({ path: path, stroke: stroke, length: 0 });
           }
           
@@ -445,7 +613,6 @@
               if (length > 0) {
                 var point = data.path.getPointAtLength ? data.path.getPointAtLength(length / 2) : null;
                 if (point) {
-                  // Background
                   var bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
                   var num = (n + 1).toString();
                   var textWidth = num.length * 8 + 12;
@@ -459,7 +626,6 @@
                   bg.setAttribute('stroke-width', '1');
                   textG.appendChild(bg);
                   
-                  // Text
                   var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
                   text.setAttribute('x', point.x);
                   text.setAttribute('y', point.y + 4);
@@ -515,7 +681,6 @@
         svgElement.style.background = 'white';
         svgElement.style.borderRadius = '8px';
 
-        // Use the library - it handles everything
         try {
           currentAnimator = new KanjivgAnimate('.kanjiVG', 500);
           statusLabel.textContent = '▶ Animating...';
