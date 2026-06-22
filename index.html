@@ -379,11 +379,15 @@
         // Build SVG with KanjiVgAnimate class and data-stroke attributes
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" class="kanjiVG" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
         svg += `<rect width="100%" height="100%" fill="white" rx="8" />`;
-        // Dotted line group for stroke order guidance
-        svg += `<g style="fill:none;stroke-width:1.5;stroke-dasharray:2,4;stroke:#94a3b8;stroke-linecap:round;stroke-linejoin:round;">`;
-        // Future strokes (dotted lines) would go here
+        
+        // Dotted line group for future strokes (KanjiVgAnimate style)
+        svg += `<g style="fill:none;stroke-width:2;stroke-dasharray:4,6;stroke:#cbd5e1;stroke-linecap:round;stroke-linejoin:round;">`;
+        allPaths.forEach(p => {
+          svg += `<path d="${p.d}" data-stroke="${p.strokeNum}" class="kanjiVG-dotted" />`;
+        });
         svg += `</g>`;
-        // Main stroke group
+        
+        // Main stroke group (solid lines)
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
         allPaths.forEach(p => {
           svg += `<path d="${p.d}" data-stroke="${p.strokeNum}" />`;
@@ -425,6 +429,21 @@
         svgElement.style.display = 'block';
         svgElement.style.background = 'white';
         svgElement.style.borderRadius = '8px';
+
+        // Apply stroke-dasharray to all paths for animation
+        const paths = svgElement.querySelectorAll('path');
+        paths.forEach(path => {
+          try {
+            const length = path.getTotalLength ? path.getTotalLength() : 100;
+            path.dataset.length = length;
+            path.style.strokeDasharray = length;
+            path.style.strokeDashoffset = length;
+          } catch(e) {
+            path.dataset.length = 100;
+            path.style.strokeDasharray = 100;
+            path.style.strokeDashoffset = 100;
+          }
+        });
 
         // Initialize KanjiVgAnimate - uses data-stroke attributes for numbering
         try {
@@ -481,20 +500,6 @@
         const paths = svgElement.querySelectorAll('path');
         const totalStrokes = paths.length;
         let completed = 0;
-
-        // First, set up all paths with their lengths
-        paths.forEach((path) => {
-          try {
-            const length = path.getTotalLength ? path.getTotalLength() : 100;
-            path.dataset.length = length;
-            path.style.strokeDasharray = length;
-            path.style.strokeDashoffset = length;
-          } catch(e) {
-            path.dataset.length = 100;
-            path.style.strokeDasharray = 100;
-            path.style.strokeDashoffset = 100;
-          }
-        });
 
         // Animate each stroke with delay
         paths.forEach((path, index) => {
