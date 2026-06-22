@@ -216,7 +216,7 @@
       const statusLabel = document.getElementById('statusLabel');
       const inputField = document.getElementById('wordInput');
 
-      // ----- Complete letter stroke data with proper lowercase -----
+      // ----- Complete letter stroke data -----
       const letterStrokes = {
         // UPPERCASE A-Z
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
@@ -246,116 +246,33 @@
         'Y': ['M10,15 L40,60', 'M40,60 L70,15', 'M40,60 L40,85'],
         'Z': ['M10,15 L70,15', 'M70,15 L10,85', 'M10,85 L70,85'],
         
-        // LOWERCASE a-z - Completely redesigned with proper shapes
-        'a': [
-          'M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60',
-          'M65,25 L65,55'
-        ],
-        'b': [
-          'M20,15 L20,75',
-          'M20,25 C35,20 50,20 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'
-        ],
-        'c': [
-          'M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'
-        ],
-        'd': [
-          'M60,15 L60,75',
-          'M60,25 C45,20 30,20 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'
-        ],
-        'e': [
-          'M60,25 C45,15 25,15 15,25 C5,40 10,55 25,60 C40,65 60,60 65,50',
-          'M20,40 L50,40'
-        ],
-        'f': [
-          'M30,15 L45,15',
-          'M40,15 L40,75',
-          'M20,30 C35,30 50,30 55,30'
-        ],
-        'g': [
-          'M55,25 C40,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,65 60,55',
-          'M60,45 C60,60 60,75 50,85 C35,90 20,85 15,70',
-          'M15,70 C10,60 10,55 15,50'
-        ],
-        'h': [
-          'M20,15 L20,75',
-          'M20,25 C35,20 50,20 60,35 C70,50 60,65 45,65'
-        ],
-        'i': [
-          'M30,15 L30,23',
-          'M30,33 L30,65'
-        ],
-        'j': [
-          'M45,15 L45,23',
-          'M45,33 L45,65 C45,75 35,80 25,75'
-        ],
-        'k': [
-          'M20,15 L20,75',
-          'M20,35 L50,15',
-          'M20,35 L50,65'
-        ],
-        'l': [
-          'M20,15 L20,75'
-        ],
-        'm': [
-          'M15,75 L15,25',
-          'M15,25 L35,45',
-          'M35,45 L55,25',
-          'M55,25 L55,75'
-        ],
-        'n': [
-          'M20,75 L20,25',
-          'M20,25 C35,20 50,20 60,35 C70,50 60,65 45,65'
-        ],
-        'o': [
-          'M35,20 C20,20 10,35 15,55 C20,70 35,75 50,70 C65,65 70,45 60,30 C50,20 40,20 35,20'
-        ],
-        'p': [
-          'M20,20 L20,85',
-          'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'
-        ],
-        'q': [
-          'M60,20 L60,85',
-          'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'
-        ],
-        'r': [
-          'M20,20 L20,65',
-          'M20,25 C30,20 45,20 60,30'
-        ],
-        's': [
-          'M60,30 C45,20 25,20 15,25 C5,35 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80'
-        ],
-        't': [
-          'M20,15 L45,15',
-          'M30,15 L30,70',
-          'M30,35 L55,35'
-        ],
-        'u': [
-          'M20,20 L20,55 C20,65 25,75 40,75 C55,75 65,65 65,50',
-          'M65,20 L65,50'
-        ],
-        'v': [
-          'M15,20 L35,70 L55,20'
-        ],
-        'w': [
-          'M10,20 L10,75',
-          'M10,75 L30,45',
-          'M30,45 L50,75',
-          'M50,75 L50,20'
-        ],
-        'x': [
-          'M15,20 L55,70',
-          'M55,20 L15,70'
-        ],
-        'y': [
-          'M15,20 L40,60',
-          'M40,60 L65,20',
-          'M40,60 L40,85 C40,90 30,90 25,85'
-        ],
-        'z': [
-          'M15,20 L65,20',
-          'M65,20 L15,75',
-          'M15,75 L65,75'
-        ],
+        // LOWERCASE a-z
+        'a': ['M55,25 C45,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,70 65,60', 'M65,25 L65,55'],
+        'b': ['M20,15 L20,75', 'M20,25 C35,20 50,20 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
+        'c': ['M60,30 C45,20 25,20 15,30 C5,45 10,65 25,75 C40,80 55,75 65,65'],
+        'd': ['M60,15 L60,75', 'M60,25 C45,20 30,20 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'],
+        'e': ['M60,25 C45,15 25,15 15,25 C5,40 10,55 25,60 C40,65 60,60 65,50', 'M20,40 L50,40'],
+        'f': ['M30,15 L45,15', 'M40,15 L40,75', 'M20,30 C35,30 50,30 55,30'],
+        'g': ['M55,25 C40,15 25,15 15,25 C5,40 10,60 25,70 C40,75 55,65 60,55', 'M60,45 C60,60 60,75 50,85 C35,90 20,85 15,70', 'M15,70 C10,60 10,55 15,50'],
+        'h': ['M20,15 L20,75', 'M20,25 C35,20 50,20 60,35 C70,50 60,65 45,65'],
+        'i': ['M30,15 L30,23', 'M30,33 L30,65'],
+        'j': ['M45,15 L45,23', 'M45,33 L45,65 C45,75 35,80 25,75'],
+        'k': ['M20,15 L20,75', 'M20,35 L50,15', 'M20,35 L50,65'],
+        'l': ['M20,15 L20,75'],
+        'm': ['M15,75 L15,25', 'M15,25 L35,45', 'M35,45 L55,25', 'M55,25 L55,75'],
+        'n': ['M20,75 L20,25', 'M20,25 C35,20 50,20 60,35 C70,50 60,65 45,65'],
+        'o': ['M35,20 C20,20 10,35 15,55 C20,70 35,75 50,70 C65,65 70,45 60,30 C50,20 40,20 35,20'],
+        'p': ['M20,20 L20,85', 'M20,30 C35,25 50,25 60,35 C70,50 60,65 40,65 C25,65 20,60 20,60'],
+        'q': ['M60,20 L60,85', 'M60,30 C45,25 30,25 20,35 C10,50 20,65 40,65 C55,65 60,60 60,60'],
+        'r': ['M20,20 L20,65', 'M20,25 C30,20 45,20 60,30'],
+        's': ['M60,30 C45,20 25,20 15,25 C5,35 15,45 25,50 C40,55 50,60 55,70 C60,80 45,85 25,80'],
+        't': ['M20,15 L45,15', 'M30,15 L30,70', 'M30,35 L55,35'],
+        'u': ['M20,20 L20,55 C20,65 25,75 40,75 C55,75 65,65 65,50', 'M65,20 L65,50'],
+        'v': ['M15,20 L35,70 L55,20'],
+        'w': ['M10,20 L10,75', 'M10,75 L30,45', 'M30,45 L50,75', 'M50,75 L50,20'],
+        'x': ['M15,20 L55,70', 'M55,20 L15,70'],
+        'y': ['M15,20 L40,60', 'M40,60 L65,20', 'M40,60 L40,85 C40,90 30,90 25,85'],
+        'z': ['M15,20 L65,20', 'M65,20 L15,75', 'M15,75 L65,75'],
         
         // NUMBERS
         '0': ['M40,15 C20,15 10,35 15,55 C20,75 40,85 60,80 C75,75 80,55 75,35 C70,20 50,15 40,15'],
@@ -467,7 +384,7 @@
         return svg;
       }
 
-      // ----- KanjiVgAnimate library implementation -----
+      // ----- KanjiVgAnimate library implementation with fixed number positioning -----
       function KanjivgAnimate(selector, time) {
         var elements = document.querySelectorAll(selector);
         var duration = time || 500;
@@ -512,38 +429,61 @@
           }
           svg.querySelector('g').parentNode.insertBefore(dottedG, svg.querySelector('g'));
           
-          // Stroke numbers
+          // Stroke numbers - positioned beside the line, not on it
           var textG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          textG.setAttribute('style', 'font-size:12px;font-weight:bold;font-family:Inter, sans-serif;fill:#1e293b;');
+          textG.setAttribute('style', 'font-size:11px;font-weight:bold;font-family:Inter, sans-serif;fill:#1e293b;');
           for (var n = 0; n < strokeData.length; n++) {
             var data = strokeData[n];
             try {
               var length = data.length;
               if (length > 0) {
-                var point = data.path.getPointAtLength ? data.path.getPointAtLength(length / 2) : null;
+                // Get point at 1/3 of the path (not midpoint) to avoid overlap
+                var point = data.path.getPointAtLength ? data.path.getPointAtLength(length * 0.35) : null;
                 if (point) {
-                  var bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                  // Get tangent angle to offset the number beside the line
+                  var prevPoint = data.path.getPointAtLength ? data.path.getPointAtLength(Math.max(0, length * 0.35 - 5)) : null;
+                  var angle = 0;
+                  if (prevPoint) {
+                    angle = Math.atan2(point.y - prevPoint.y, point.x - prevPoint.x);
+                  }
+                  
+                  // Offset perpendicular to the line (to the right side)
+                  var offsetX = 14 * Math.cos(angle + Math.PI/2);
+                  var offsetY = 14 * Math.sin(angle + Math.PI/2);
+                  
+                  // If angle is vertical, offset to the right
+                  if (Math.abs(angle) < 0.3 || Math.abs(angle) > 2.8) {
+                    offsetX = 18;
+                    offsetY = -6;
+                  }
+                  
                   var num = (n + 1).toString();
-                  var textWidth = num.length * 8 + 12;
-                  bg.setAttribute('x', point.x - textWidth/2);
-                  bg.setAttribute('y', point.y - 12);
+                  
+                  // Background
+                  var bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                  var textWidth = num.length * 8 + 10;
+                  bg.setAttribute('x', point.x + offsetX - textWidth/2);
+                  bg.setAttribute('y', point.y + offsetY - 9);
                   bg.setAttribute('width', textWidth);
-                  bg.setAttribute('height', '20');
-                  bg.setAttribute('rx', '10');
-                  bg.setAttribute('fill', 'rgba(255,255,255,0.9)');
+                  bg.setAttribute('height', '18');
+                  bg.setAttribute('rx', '9');
+                  bg.setAttribute('fill', 'rgba(255,255,255,0.92)');
                   bg.setAttribute('stroke', '#d1d5db');
                   bg.setAttribute('stroke-width', '1');
                   textG.appendChild(bg);
                   
+                  // Text
                   var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-                  text.setAttribute('x', point.x);
-                  text.setAttribute('y', point.y + 4);
+                  text.setAttribute('x', point.x + offsetX);
+                  text.setAttribute('y', point.y + offsetY + 3);
                   text.setAttribute('text-anchor', 'middle');
                   text.textContent = num;
                   textG.appendChild(text);
                 }
               }
-            } catch(e) {}
+            } catch(e) {
+              // Skip if can't get point
+            }
           }
           svg.querySelector('g').parentNode.appendChild(textG);
           
