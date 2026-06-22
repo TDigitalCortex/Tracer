@@ -291,7 +291,7 @@
         ' ': []
       };
 
-      // ----- Generate SVG with KanjiVgAnimate structure -----
+      // ----- Generate SVG with proper KanjiVgAnimate structure -----
       function generateSVG(text) {
         if (!text) return null;
         
@@ -376,18 +376,10 @@
 
         const finalHeight = Math.max(400, lines.length * lineHeight + 100 + padding);
 
-        // Build SVG with KanjiVgAnimate class and data-stroke attributes
+        // Build SVG with KanjiVgAnimate class - this is the exact structure the library expects
+        // The library automatically adds dotted lines and stroke numbers based on data-stroke
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" class="kanjiVG" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
         svg += `<rect width="100%" height="100%" fill="white" rx="8" />`;
-        
-        // Dotted line group for future strokes (KanjiVgAnimate style)
-        svg += `<g style="fill:none;stroke-width:2;stroke-dasharray:4,6;stroke:#cbd5e1;stroke-linecap:round;stroke-linejoin:round;">`;
-        allPaths.forEach(p => {
-          svg += `<path d="${p.d}" data-stroke="${p.strokeNum}" class="kanjiVG-dotted" />`;
-        });
-        svg += `</g>`;
-        
-        // Main stroke group (solid lines)
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
         allPaths.forEach(p => {
           svg += `<path d="${p.d}" data-stroke="${p.strokeNum}" />`;
@@ -430,24 +422,12 @@
         svgElement.style.background = 'white';
         svgElement.style.borderRadius = '8px';
 
-        // Apply stroke-dasharray to all paths for animation
-        const paths = svgElement.querySelectorAll('path');
-        paths.forEach(path => {
-          try {
-            const length = path.getTotalLength ? path.getTotalLength() : 100;
-            path.dataset.length = length;
-            path.style.strokeDasharray = length;
-            path.style.strokeDashoffset = length;
-          } catch(e) {
-            path.dataset.length = 100;
-            path.style.strokeDasharray = 100;
-            path.style.strokeDashoffset = 100;
-          }
-        });
-
-        // Initialize KanjiVgAnimate - uses data-stroke attributes for numbering
+        // Initialize KanjiVgAnimate - the library handles everything:
+        // - Dotted lines for future strokes
+        // - Stroke numbers on each stroke
+        // - Smooth animation with CSS transitions
         try {
-          // The library automatically handles the animation with CSS transitions
+          // The library automatically adds dotted lines and stroke numbers
           currentAnimator = new KanjivgAnimate('.kanjiVG', 500);
           animating = true;
           statusLabel.textContent = '▶ Animating...';
@@ -495,26 +475,62 @@
         }
       }
 
-      // ----- Fallback CSS animation (exact replica of library behavior) -----
+      // ----- Fallback CSS animation (replicates library behavior) -----
       function fallbackAnimate(svgElement) {
         const paths = svgElement.querySelectorAll('path');
         const totalStrokes = paths.length;
         let completed = 0;
+
+        // Add dotted preview for all strokes
+        paths.forEach((path, index) => {
+          try {
+            const length = path.getTotalLength ? path.getTotalLength() : 100;
+            path.dataset.length = length;
+            path.style.strokeDasharray = length;
+            path.style.strokeDashoffset = length;
+            
+            // Add stroke number
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('font-size', '12');
+            text.setAttribute('fill', '#1e293b');
+            text.setAttribute('font-weight', 'bold');
+            text.setAttribute('font-family', 'Inter, sans-serif');
+            text.textContent = index + 1;
+            // Position at midpoint - simplified
+            const midPoint = getMidPoint(path);
+            if (midPoint) {
+              text.setAttribute('x', midPoint.x);
+              text.setAttribute('y', midPoint.y);
+              // Add background
+              const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+              const bbox = text.getBBox ? text.getBBox() : { width: 20, height: 16 };
+              bg.setAttribute('x', midPoint.x - bbox.width/2 - 4);
+              bg.setAttribute('y', midPoint.y - bbox.height/2 - 2);
+              bg.setAttribute('width', bbox.width + 8);
+              bg.setAttribute('height', bbox.height + 4);
+              bg.setAttribute('rx', '4');
+              bg.setAttribute('fill', 'rgba(255,255,255,0.85)');
+              bg.setAttribute('stroke', '#d1d5db');
+              bg.setAttribute('stroke-width', '1');
+              svgElement.querySelector('g').appendChild(bg);
+              svgElement.querySelector('g').appendChild(text);
+            }
+          } catch(e) {
+            // Skip
+          }
+        });
 
         // Animate each stroke with delay
         paths.forEach((path, index) => {
           const length = parseFloat(path.dataset.length) || 100;
           const delay = index * 500;
           
-          // Use CSS transition for smooth animation
           path.style.transition = `stroke-dashoffset 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay}ms`;
           
-          // Start the animation
           setTimeout(() => {
             path.style.strokeDashoffset = 0;
           }, 50);
           
-          // Track completion
           setTimeout(() => {
             completed++;
             const progress = Math.round((completed / totalStrokes) * 100);
@@ -526,6 +542,20 @@
         });
         
         statusLabel.textContent = '▶ Animating (fallback)...';
+      }
+
+      // ----- Helper to get midpoint of a path -----
+      function getMidPoint(path) {
+        try {
+          const length = path.getTotalLength ? path.getTotalLength() : 0;
+          if (length > 0) {
+            const point = path.getPointAtLength ? path.getPointAtLength(length / 2) : null;
+            if (point) {
+              return { x: point.x, y: point.y };
+            }
+          }
+        } catch(e) {}
+        return null;
       }
 
       // ----- Public functions -----
