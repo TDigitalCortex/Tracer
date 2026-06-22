@@ -183,7 +183,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">KanjiVgAnimate library · Exact replica</div>
+    <div class="subhead">KanjiVgAnimate library · Full alphabet</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -353,7 +353,6 @@
             for (let sIdx = 0; sIdx < strokes.length; sIdx++) {
               const pathData = strokes[sIdx];
               
-              // Transform path with scaling and positioning
               const transformed = pathData.replace(/([MLCQA])([^MLCQA]*)/g, (match, cmd, coords) => {
                 const nums = coords.trim().split(/[\s,]+/).filter(n => n !== '').map(Number);
                 const scaled = nums.map((n, i) => {
@@ -380,6 +379,11 @@
         // Build SVG with KanjiVgAnimate class and data-stroke attributes
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" class="kanjiVG" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
         svg += `<rect width="100%" height="100%" fill="white" rx="8" />`;
+        // Dotted line group for stroke order guidance
+        svg += `<g style="fill:none;stroke-width:1.5;stroke-dasharray:2,4;stroke:#94a3b8;stroke-linecap:round;stroke-linejoin:round;">`;
+        // Future strokes (dotted lines) would go here
+        svg += `</g>`;
+        // Main stroke group
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
         allPaths.forEach(p => {
           svg += `<path d="${p.d}" data-stroke="${p.strokeNum}" />`;
@@ -424,6 +428,7 @@
 
         // Initialize KanjiVgAnimate - uses data-stroke attributes for numbering
         try {
+          // The library automatically handles the animation with CSS transitions
           currentAnimator = new KanjivgAnimate('.kanjiVG', 500);
           animating = true;
           statusLabel.textContent = '▶ Animating...';
@@ -477,37 +482,42 @@
         const totalStrokes = paths.length;
         let completed = 0;
 
-        paths.forEach((path, index) => {
+        // First, set up all paths with their lengths
+        paths.forEach((path) => {
           try {
             const length = path.getTotalLength ? path.getTotalLength() : 100;
-            const delay = index * 500;
-            
+            path.dataset.length = length;
             path.style.strokeDasharray = length;
             path.style.strokeDashoffset = length;
-            path.style.transition = `stroke-dashoffset 500ms ease ${delay}ms`;
-            
-            // Use requestAnimationFrame to apply the transition
-            requestAnimationFrame(() => {
-              path.style.strokeDashoffset = 0;
-            });
-            
-            // Track completion
-            const onFinish = () => {
-              completed++;
-              const progress = Math.round((completed / totalStrokes) * 100);
-              statusLabel.textContent = `⏳ ${progress}% · ${completed}/${totalStrokes}`;
-              if (completed === totalStrokes) {
-                statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes`;
-              }
-            };
-            
-            // Use setTimeout as a simple completion tracker
-            setTimeout(onFinish, delay + 500 + 50);
-            
           } catch(e) {
-            // Skip if path can't be measured
-            completed++;
+            path.dataset.length = 100;
+            path.style.strokeDasharray = 100;
+            path.style.strokeDashoffset = 100;
           }
+        });
+
+        // Animate each stroke with delay
+        paths.forEach((path, index) => {
+          const length = parseFloat(path.dataset.length) || 100;
+          const delay = index * 500;
+          
+          // Use CSS transition for smooth animation
+          path.style.transition = `stroke-dashoffset 500ms cubic-bezier(0.25, 0.46, 0.45, 0.94) ${delay}ms`;
+          
+          // Start the animation
+          setTimeout(() => {
+            path.style.strokeDashoffset = 0;
+          }, 50);
+          
+          // Track completion
+          setTimeout(() => {
+            completed++;
+            const progress = Math.round((completed / totalStrokes) * 100);
+            statusLabel.textContent = `⏳ ${progress}% · ${completed}/${totalStrokes}`;
+            if (completed === totalStrokes) {
+              statusLabel.textContent = `✅ Complete · ${totalStrokes} strokes`;
+            }
+          }, delay + 500 + 50);
         });
         
         statusLabel.textContent = '▶ Animating (fallback)...';
