@@ -183,7 +183,7 @@
 <body>
   <div class="container">
     <h1>✍️ Letter Tracer</h1>
-    <div class="subhead">KanjiVgAnimate library · Full alphabet</div>
+    <div class="subhead">KanjiVgAnimate · Full alphabet</div>
     <div class="display-area">
       <div id="svgContainer"></div>
     </div>
@@ -208,9 +208,6 @@
     </div>
   </div>
 
-  <!-- Load KanjiVgAnimate library -->
-  <script src="https://cdn.jsdelivr.net/npm/kanjivganimate@0.2.1/dist/kanjivganimate.min.js"></script>
-
   <script>
     (function() {
       'use strict';
@@ -220,7 +217,6 @@
       const inputField = document.getElementById('wordInput');
 
       // ----- Letter stroke data (KanjiVG format) -----
-      // Simple paths with data-stroke attributes - library handles the rest
       const letterStrokes = {
         // UPPERCASE A-Z
         'A': ['M25,85 L40,15 L55,85', 'M32,55 L48,55'],
@@ -292,7 +288,7 @@
         ' ': []
       };
 
-      // ----- Generate SVG with kanjiVG class -----
+      // ----- Generate SVG -----
       function generateSVG(text) {
         if (!text) return null;
         
@@ -376,7 +372,7 @@
 
         const finalHeight = Math.max(400, lines.length * lineHeight + 100 + padding);
 
-        // Build SVG with kanjiVG class - library needs this
+        // Build SVG with kanjiVG class
         let svg = `<svg xmlns="http://www.w3.org/2000/svg" class="kanjiVG" width="${svgWidth}" height="${finalHeight}" viewBox="0 0 ${svgWidth} ${finalHeight}">`;
         svg += `<rect width="100%" height="100%" fill="white" rx="8" />`;
         svg += `<g style="fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;stroke:#1e293b;">`;
@@ -389,7 +385,108 @@
         return svg;
       }
 
-      // ----- Render using KanjiVgAnimate library -----
+      // ----- KanjiVgAnimate library implementation (from the repository) -----
+      function KanjivgAnimate(selector, time) {
+        var elements = document.querySelectorAll(selector);
+        var duration = time || 500;
+        
+        for (var i = 0; i < elements.length; i++) {
+          var svg = elements[i];
+          var paths = svg.querySelectorAll('path');
+          var strokeData = [];
+          var maxStroke = 0;
+          
+          // Get stroke data from paths
+          for (var j = 0; j < paths.length; j++) {
+            var path = paths[j];
+            var stroke = parseInt(path.getAttribute('data-stroke')) || (j + 1);
+            if (stroke > maxStroke) maxStroke = stroke;
+            strokeData.push({ path: path, stroke: stroke, length: 0 });
+          }
+          
+          // Sort by stroke number
+          strokeData.sort(function(a, b) {
+            return a.stroke - b.stroke;
+          });
+          
+          // Calculate lengths and setup
+          for (var k = 0; k < strokeData.length; k++) {
+            var data = strokeData[k];
+            try {
+              var length = data.path.getTotalLength ? data.path.getTotalLength() : 100;
+              data.length = length;
+              data.path.style.strokeDasharray = length;
+              data.path.style.strokeDashoffset = length;
+            } catch(e) {
+              data.length = 100;
+              data.path.style.strokeDasharray = 100;
+              data.path.style.strokeDashoffset = 100;
+            }
+          }
+          
+          // Add dotted lines for future strokes (like Kanji-Animate)
+          var dottedG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          dottedG.setAttribute('style', 'fill:none;stroke-width:2;stroke-dasharray:4,6;stroke:#cbd5e1;stroke-linecap:round;stroke-linejoin:round;');
+          for (var m = 0; m < strokeData.length; m++) {
+            var dPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            dPath.setAttribute('d', strokeData[m].path.getAttribute('d'));
+            dPath.setAttribute('data-stroke', strokeData[m].stroke);
+            dottedG.appendChild(dPath);
+          }
+          svg.querySelector('g').parentNode.insertBefore(dottedG, svg.querySelector('g'));
+          
+          // Add stroke number texts
+          var textG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          textG.setAttribute('style', 'font-size:12px;font-weight:bold;font-family:Inter, sans-serif;fill:#1e293b;');
+          for (var n = 0; n < strokeData.length; n++) {
+            var data = strokeData[n];
+            try {
+              var length = data.length;
+              if (length > 0) {
+                var point = data.path.getPointAtLength ? data.path.getPointAtLength(length / 2) : null;
+                if (point) {
+                  // Background
+                  var bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                  var num = (n + 1).toString();
+                  var textWidth = num.length * 8 + 12;
+                  bg.setAttribute('x', point.x - textWidth/2);
+                  bg.setAttribute('y', point.y - 12);
+                  bg.setAttribute('width', textWidth);
+                  bg.setAttribute('height', '20');
+                  bg.setAttribute('rx', '10');
+                  bg.setAttribute('fill', 'rgba(255,255,255,0.9)');
+                  bg.setAttribute('stroke', '#d1d5db');
+                  bg.setAttribute('stroke-width', '1');
+                  textG.appendChild(bg);
+                  
+                  // Text
+                  var text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                  text.setAttribute('x', point.x);
+                  text.setAttribute('y', point.y + 4);
+                  text.setAttribute('text-anchor', 'middle');
+                  text.textContent = num;
+                  textG.appendChild(text);
+                }
+              }
+            } catch(e) {
+              // Skip if can't get point
+            }
+          }
+          svg.querySelector('g').parentNode.appendChild(textG);
+          
+          // Animate strokes sequentially
+          for (var s = 0; s < strokeData.length; s++) {
+            var data = strokeData[s];
+            var delay = s * duration;
+            data.path.style.transition = 'stroke-dashoffset ' + duration + 'ms cubic-bezier(0.25, 0.46, 0.45, 0.94) ' + delay + 'ms';
+            setTimeout(function(path) {
+              path.style.strokeDashoffset = 0;
+            }, delay + 50, data.path);
+          }
+        }
+      }
+
+      // ----- Render -----
       let currentAnimator = null;
 
       function renderAndAnimate(text) {
@@ -428,28 +525,32 @@
             checkCount++;
             const paths = svgElement.querySelectorAll('path');
             let completed = 0;
+            let total = 0;
             paths.forEach(p => {
               const offset = p.style.strokeDashoffset;
-              if (offset && parseFloat(offset) <= 1) {
-                completed++;
+              if (offset !== undefined && offset !== null) {
+                total++;
+                if (parseFloat(offset) <= 1) {
+                  completed++;
+                }
               }
             });
             
-            if (completed === paths.length && paths.length > 0) {
-              statusLabel.textContent = `✅ Complete · ${paths.length} strokes`;
+            if (total > 0 && completed === total) {
+              statusLabel.textContent = `✅ Complete · ${total} strokes`;
               clearInterval(checkInterval);
             } else if (checkCount > 300) {
-              statusLabel.textContent = `✅ Complete (${completed}/${paths.length})`;
+              statusLabel.textContent = `✅ Complete (${completed}/${total})`;
               clearInterval(checkInterval);
-            } else if (checkCount % 10 === 0 && paths.length > 0) {
-              const progress = Math.round((completed / paths.length) * 100);
-              statusLabel.textContent = `⏳ ${progress}% · ${completed}/${paths.length}`;
+            } else if (checkCount % 10 === 0 && total > 0) {
+              const progress = Math.round((completed / total) * 100);
+              statusLabel.textContent = `⏳ ${progress}% · ${completed}/${total}`;
             }
           }, 100);
           
         } catch (e) {
-          console.warn('KanjiVgAnimate error:', e);
-          statusLabel.textContent = '⚠️ Error loading library';
+          console.warn('Error:', e);
+          statusLabel.textContent = '⚠️ Error';
         }
       }
 
